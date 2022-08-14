@@ -168,10 +168,12 @@ jobs:
           fairtool-head version
 
       - name: "Validate App: ${{ env.ORGNAME }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # needed to be able to ad-hoc codesign embedded frameworks
           plutil -replace 'com\.apple\.security\.cs\.disable-library-validation' -bool true Sandbox.entitlements
-          fairtool-head fair validate --verbose --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --token "${{ secrets.GITHUB_TOKEN }}" --base . --project . --fair-properties "AppFairApp.xcconfig"
+          fairtool-head fair validate --verbose --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project . --fair-properties "AppFairApp.xcconfig"
 
       # Verifies that pages are enabled for this repository
       - name: "Check Repository Page: https://${{ env.ORGNAME }}.github.io/App"
@@ -503,6 +505,8 @@ jobs:
           fairtool-head version
 
       - name: "Validate App: ${{ env.ORGNAME }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
         run: |
           # needed to be able to ad-hoc codesign embedded frameworks
           plutil -replace 'com\.apple\.security\.cs\.disable-library-validation' -bool true ReleasePR/Sandbox.entitlements
@@ -511,7 +515,6 @@ jobs:
             --project ReleasePR \
             --hub github.com/${{ inputs.fairground }} \
             --base-repo "App" \
-            --token "${{ secrets.token }}" \
             --org "${{ env.ORGNAME }}" \
             --ref "${{ env.COMMITHASH }}" \
             --integration-title "${{ env.PRTITLE }}" \
@@ -526,6 +529,8 @@ jobs:
             --verbose
 
       - name: Integrate PR
+        env:
+          GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
         run: |
           rm -rf "staging/"
           mkdir "staging/"
@@ -533,14 +538,14 @@ jobs:
           # store the PR in the build archive
           cp -a ReleasePR "staging/"
 
-          fairtool-head fair merge --verbose --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --token "${{ secrets.token }}" --base . --project ReleasePR --fair-properties "AppFairApp.xcconfig" --output .
+          fairtool-head fair merge --verbose --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project ReleasePR --fair-properties "AppFairApp.xcconfig" --output .
 
           file Assets.xcassets/AppIcon.appiconset/*.*
 
           # needed to be able to ad-hoc codesign embedded frameworks
           plutil -replace 'com\.apple\.security\.cs\.disable-library-validation' -bool true Sandbox.entitlements
         
-          fairtool-head fair validate --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --token "${{ secrets.token }}" --base . --project "${{ env.IR_TARGET }}" --fair-properties "AppFairApp.xcconfig"
+          fairtool-head fair validate --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project "${{ env.IR_TARGET }}" --fair-properties "AppFairApp.xcconfig"
 
           xcrun swift package resolve
           cp -a .build/checkouts Dependencies
