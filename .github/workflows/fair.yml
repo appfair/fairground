@@ -665,6 +665,10 @@ jobs:
           mv AppFairApp.xcconfig.clean AppFairApp.xcconfig
           rm -rf fastlane/
 
+      - name: "Examine results"
+        if: always()
+        run: |
+          ls -lart
 
       - name: "Configure Deployment Platforms"
         id: platforms
