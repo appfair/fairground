@@ -505,6 +505,8 @@ jobs:
                 key_content: ENV['TESTFLIGHT_KEY_CONTENTS'],
               })
 
+              get_certificates
+
               get_provisioning_profile({
                 app_identifier: "org.appfair.${{ env.BUNDLE_ID }}",
                 fail_on_name_taken: true,
@@ -514,6 +516,7 @@ jobs:
                 xcodeproj: "project.xcodeproj",
                 build_configuration: "Release",
               })
+
               update_project_team({
                 path: "project.xcodeproj",
                 teamid: ENV['TESTFLIGHT_TEAMID'],
@@ -548,10 +551,12 @@ jobs:
           end
           EOF
 
-          fastlane beta
+          CI=true fastlane beta
 
-          # Restore the previous config
+
+          # Cleanup and restore the previous config
           mv AppFairApp.xcconfig.clean AppFairApp.xcconfig
+          rm -rf fastlane/
 
       - name: Install fairtool
         run: |
