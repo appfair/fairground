@@ -89,19 +89,17 @@ on:
         required: false
 
       # Integrate-Release secrets
-      token:
+      APP_FAIR_BOT_TOKEN:
         required: false
-      bot_token:
+      APP_FAIR_ALLOW_NAME:
         required: false
-      allow_name:
+      APP_FAIR_DENY_NAME:
         required: false
-      deny_name:
+      APP_FAIR_ALLOW_FROM:
         required: false
-      allow_from:
+      APP_FAIR_DENY_FROM:
         required: false
-      deny_from:
-        required: false
-      fairseal_key:
+      APP_FAIR_FAIRSEAL_KEY:
         required: false
 
       TESTFLIGHT_TEAMID:
@@ -519,12 +517,12 @@ jobs:
             --integration-title "${{ env.PRTITLE }}" \
             --fair-properties "AppFairApp.xcconfig" \
             --fairseal-issuer "${{ inputs.fairseal_issuer }}" \
-            --fairseal-key "${{ inputs.fairseal_key }}" \
+            --fairseal-key "${{ secrets.APP_FAIR_FAIRSEAL_KEY }}" \
             --allow-license "${{ inputs.license }}" \
-            --allow-name "${{ secrets.allow_name }}" \
-            --deny-name "${{ secrets.deny_name }}" \
-            --allow-from "${{ secrets.allow_from }}" \
-            --deny-from "${{ secrets.deny_from }}" \
+            --allow-name "${{ secrets.APP_FAIR_ALLOW_NAME }}" \
+            --deny-name "${{ secrets.APP_FAIR_DENY_NAME }}" \
+            --allow-from "${{ secrets.APP_FAIR_ALLOW_FROM }}" \
+            --deny-from "${{ secrets.APP_FAIR_DENY_FROM }}" \
             --verbose
 
       - name: Integrate PR
@@ -668,7 +666,7 @@ jobs:
       - name: "Generate macOS fairseal"
         if: ${{ inputs.target_macos == true && steps.platforms.outputs.macos == 'enabled' }}
         env:
-          GITHUB_TOKEN: ${{ secrets.bot_token }}
+          GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
 
         run: |
           # build the URL for the GitHub download artifact
@@ -696,9 +694,9 @@ jobs:
             --verbose \
             --hub "github.com/${{ inputs.fairground }}" \
             --base-repo "App" \
-            --token "${{ secrets.bot_token }}" \
+            --token "${{ secrets.APP_FAIR_BOT_TOKEN }}" \
             --org "${{ env.ORGNAME }}" \
-            --fairseal-key "${{ inputs.fairseal_key }}" \
+            --fairseal-key "${{ secrets.APP_FAIR_FAIRSEAL_KEY }}" \
             --trusted-artifact "staging/${{ env.FAIR_APP_ARTIFACT }}-macOS.zip" \
             --permitted-diffs 0 \
             --retry-duration 600 \
@@ -713,7 +711,7 @@ jobs:
       - name: "Generate iOS fairseal"
         if: ${{ inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' }}
         env:
-          GITHUB_TOKEN: ${{ secrets.bot_token }}
+          GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
         run: |
           # build the URL for the GitHub download artifact
           IPAURL="https://github.com/${{ env.ORGNAME }}/App/releases/download/${{ steps.get_semver_tag.outputs.semver_tag }}/${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa" 
@@ -736,9 +734,9 @@ jobs:
             --verbose \
             --hub "github.com/${{ inputs.fairground }}" \
             --base-repo "App" \
-            --token "${{ secrets.bot_token }}" \
+            --token "${{ secrets.APP_FAIR_BOT_TOKEN }}" \
             --org "${{ env.ORGNAME }}" \
-            --fairseal-key "${{ inputs.fairseal_key }}" \
+            --fairseal-key "${{ secrets.APP_FAIR_FAIRSEAL_KEY }}" \
             --trusted-artifact "staging/${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa" \
             --permitted-diffs 100000000 \
             --retry-duration 600 \
@@ -753,7 +751,7 @@ jobs:
       - name: "Create TestFlight App"
         if: ${{ steps.testflight.outputs.enabled == 'true' }}
         env:
-          GITHUB_TOKEN: ${{ secrets.bot_token }}
+          GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
           TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
           TESTFLIGHT_ISSUER_ID: ${{ secrets.TESTFLIGHT_ISSUER_ID }}
           TESTFLIGHT_KEY_ID: ${{ secrets.TESTFLIGHT_KEY_ID }}
@@ -821,7 +819,7 @@ jobs:
 
       - name: "Publish Catalog"
         env:
-          GITHUB_TOKEN: ${{ secrets.bot_token }}
+          GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
         run: |
           gh workflow --repo "${{ inputs.fairground }}/${{ inputs.fairground }}.github.io" run "catalog.yml"
 
