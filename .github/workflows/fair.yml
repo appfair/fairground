@@ -506,7 +506,7 @@ jobs:
               })
 
               get_provisioning_profile({
-                app_identifier: ENV['PRODUCT_BUNDLE_IDENTIFIER'],
+                app_identifier: "org.appfair.${{ env.BUNDLE_ID }}",
                 fail_on_name_taken: true,
               })
           
