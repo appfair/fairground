@@ -505,12 +505,12 @@ jobs:
                 key_content: ENV['TESTFLIGHT_KEY_CONTENTS'],
               })
 
-              get_certificates({
-                generate_apple_certs: true,
-                team_id: ENV['TESTFLIGHT_TEAMID'],
-                keychain_path: "/Users/runner/Library/Keychains/fastlane_tmp_keychain-db",
-                keychain_password: "",
-              })
+              #get_certificates({
+              #generate_apple_certs: true,
+              #team_id: ENV['TESTFLIGHT_TEAMID'],
+              #keychain_path: "/Users/runner/Library/Keychains/fastlane_tmp_keychain-db",
+              #keychain_password: "",
+              #})
 
               get_provisioning_profile({
                 app_identifier: "org.appfair.${{ env.BUNDLE_ID }}",
