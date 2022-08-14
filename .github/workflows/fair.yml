@@ -38,7 +38,6 @@ on:
       fairseal_issuer:
         required: false
         type: string
-        default: appfairbot
       # the license that fairground projects must adhere to
       license:
         required: false
@@ -479,8 +478,11 @@ jobs:
         id: testflight
         if: ${{ env.TESTFLIGHT_TEAMID != '' }}
         run: |
+          cd ReleasePR
           echo "::set-output name=defined::true"
+          # check the 'TESTFLIGHT_DEPLOY' key in AppFairApp.xcconfig
           echo "::set-output name=enabled::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme AppFairApp archive 2>/dev/null | jq -r '.[].buildSettings.TESTFLIGHT_DEPLOY')"
+          cd -
 
       - name: "Install fastlane"
         if: ${{ steps.testflight.outputs.enabled == 'true' }}
