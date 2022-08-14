@@ -505,20 +505,9 @@ jobs:
                 key_content: ENV['TESTFLIGHT_KEY_CONTENTS'],
               })
 
-              create_keychain({
-                name: "temp",
-                password: "temp",
-                default_keychain: true,
-                unlock: true,
-                timeout: 3600,
-                lock_when_sleeps: false,
-              })
-
               get_certificates({
                 generate_apple_certs: true,
                 team_id: ENV['TESTFLIGHT_TEAMID'],
-                keychain_name: "temp",
-                keychain_password: "temp",
               })
 
               get_provisioning_profile({
