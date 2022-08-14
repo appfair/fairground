@@ -555,17 +555,31 @@ jobs:
           TESTFLIGHT_KEY_CONTENTS: ${{ secrets.TESTFLIGHT_KEY_CONTENTS }}
           TESTFLIGHT_CODESIGNING_IDENTITY: ${{ secrets.TESTFLIGHT_CODESIGNING_IDENTITY }}
         run: |
-          brew install fastlane
           mkdir fastlane/
+
+          security delete-keychain appstore.keychain || true
+          security create-keychain -p "${{ secrets.TESTFLIGHT_CERTKEY_PASSWORD }}" appstore.keychain
+          security default-keychain -s appstore.keychain
+          security list-keychains -s appstore.keychain
+
+          # import certificate
+          echo "${{ secrets.TESTFLIGHT_CERTKEY_P12_BASE64 }}" | base64 -d -o fastlane/appstore.p12
+          security import fastlane/appstore.p12 -k appstore.keychain -P "${{ secrets.TESTFLIGHT_CERTKEY_PASSWORD }}" -A
+          rm -f fastlane/appstore.p12
+
+          security set-key-partition-list -S "apple-tool:,apple:,codesign:" -s -k "${{ secrets.TESTFLIGHT_CERTKEY_PASSWORD }}" appstore.keychain
+
+          # show valid identities
+          security find-identity -v
 
           cp AppFairApp.xcconfig AppFairApp.xcconfig.clean
 
+          echo "PRODUCT_BUNDLE_IDENTIFIER = org.appfair.${{ env.BUNDLE_ID }}" >> AppFairApp.xcconfig
+          echo "DEVELOPMENT_TEAM = ${{ env.TESTFLIGHT_TEAMID }}" >> AppFairApp.xcconfig
           # Fastlane bug: if the platforms include "osx", then iOS won't work
           echo "SUPPORTED_PLATFORMS = iphoneos" >> AppFairApp.xcconfig
-          echo "CODE_SIGN_STYLE = Manual" >> AppFairApp.xcconfig
-          echo "DEVELOPMENT_TEAM = ${{ env.TESTFLIGHT_TEAMID }}" >> AppFairApp.xcconfig
-          echo "PRODUCT_BUNDLE_IDENTIFIER = org.appfair.${{ env.BUNDLE_ID }}" >> AppFairApp.xcconfig
-          echo "PROVISIONING_PROFILE_SPECIFIER = org.appfair.${{ env.BUNDLE_ID }} AppStore" >> AppFairApp.xcconfig
+
+          brew install fastlane
 
           cat > fastlane/Fastfile << EOF
           default_platform(:ios)
@@ -584,6 +598,7 @@ jobs:
                 platform: "ios",
                 fail_on_name_taken: true,
                 skip_fetch_profiles: false,
+                output_path: "fastlane",
               })
             end
           
