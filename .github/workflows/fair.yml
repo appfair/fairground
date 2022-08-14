@@ -467,24 +467,19 @@ jobs:
           echo "TESTFLIGHT_TEAMID: ${TESTFLIGHT_TEAMID}"
           echo "PRODUCT_NAME: ${{ env.PRODUCT_NAME }}"
 
-      - name: "Check TestFlight Conditional"
-        env:
-          TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
-        if: ${{ env.TESTFLIGHT_TEAMID != '' }}
-        run: |
-          echo "TESTFLIGHT_TEAMID: ${{ env.TESTFLIGHT_TEAMID }}"
-
       - name: "Configure TestFlight"
         id: testflight
         if: ${{ env.TESTFLIGHT_TEAMID != '' }}
+        env:
+          TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
         run: |
           cd ReleasePR
           echo "::set-output name=defined::true"
-          # check the 'TESTFLIGHT_DEPLOY_ID' key in AppFairApp.xcconfig
-          echo "::set-output name=appid::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme AppFairApp archive 2>/dev/null | jq -r '.[].buildSettings.TESTFLIGHT_DEPLOY_ID')"
+          # check the 'TESTFLIGHT_APP_ID' key in AppFairApp.xcconfig
+          echo "::set-output name=appid::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme AppFairApp archive 2>/dev/null | jq -r '.[].buildSettings.TESTFLIGHT_APP_ID')"
           cd -
 
-      - name: "Deploy TestFlight"
+      - name: "Deploy TestFlight ${{ steps.testflight.outputs.appid }}"
         if: ${{ steps.testflight.outputs.appid != '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
