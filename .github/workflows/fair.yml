@@ -124,10 +124,6 @@ jobs:
     if: ${{ inputs.fairseal_issuer == '' }}
     runs-on: macos-12
     timeout-minutes: 45
-
-    env:
-      DEVELOPER_DIR: /Applications/Xcode_13.2.1.app/Contents/Developer
-
     steps:
       - name: "Initialize fair-ground"
         env:
@@ -407,10 +403,6 @@ jobs:
     if: ${{ inputs.fairseal_issuer != '' }}
     runs-on: macos-12
     timeout-minutes: 45
-
-    env:
-      DEVELOPER_DIR: /Applications/Xcode_13.2.1.app/Contents/Developer
-
     steps:
       - name: "Initialize fair-ground"
         env:
