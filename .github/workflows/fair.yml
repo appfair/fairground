@@ -564,6 +564,12 @@ jobs:
           # show valid identities
           security find-identity -v
 
+          cp AppFairApp.xcconfig AppFairApp.xcconfig.clean
+          echo "PRODUCT_BUNDLE_IDENTIFIER = org.appfair.${{ env.BUNDLE_ID }}" >> AppFairApp.xcconfig
+          echo "DEVELOPMENT_TEAM = ${{ env.TESTFLIGHT_TEAMID }}" >> AppFairApp.xcconfig
+          # Fastlane bug: if the platforms include "osx", then iOS won't work
+          echo "SUPPORTED_PLATFORMS = iphoneos" >> AppFairApp.xcconfig
+
           # Fastlane requires that scheme be shared,
           # but we rely on auto-generated schemes,
           # so generate a shell scheme for AppFairApp
@@ -636,7 +642,7 @@ jobs:
                 sdk: "iphoneos",
                 export_team_id: ENV['TESTFLIGHT_TEAMID'],
                 codesigning_identity: ENV['TESTFLIGHT_CODESIGNING_IDENTITY'],
-                xcargs: "PRODUCT_BUNDLE_IDENTIFIER='org.appfair.${{ env.BUNDLE_ID }}' DEVELOPMENT_TEAM='${{ env.TESTFLIGHT_TEAMID }}' SUPPORTED_PLATFORMS='iphoneos'",
+                xcargs: "PRODUCT_BUNDLE_IDENTIFIER='org.appfair.${{ env.BUNDLE_ID }}' DEVELOPMENT_TEAM='${{ env.TESTFLIGHT_TEAMID }}'",
               })
             end
           
@@ -656,6 +662,7 @@ jobs:
 
           # Cleanup and restore the previous config
           rm -rf fastlane/
+          mv AppFairApp.xcconfig.clean AppFairApp.xcconfig
 
       - name: "Examine results"
         if: always()
