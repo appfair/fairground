@@ -625,7 +625,6 @@ jobs:
                 platform: "ios",
                 fail_on_name_taken: true,
                 skip_fetch_profiles: false,
-                output_path: "fastlane",
               })
             end
           
