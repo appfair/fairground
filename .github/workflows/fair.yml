@@ -437,47 +437,6 @@ jobs:
           echo "BUNDLE_ID=app.$(echo ${{ env.ORGNAME }})" >> $GITHUB_ENV
           echo "BUILDING PRODUCT: ${{ env.PRODUCT_NAME }}"
 
-      - name: view the secrets context
-        shell: bash
-        run: echo "$SECRETS_CONTEXT"
-        env:
-          SECRETS_CONTEXT: ${{ toJson(secrets) }}
-
-      - name: "Check APP_FAIR_FAIRSEAL_KEY Conditional"
-        env:
-          APP_FAIR_FAIRSEAL_KEY: ${{ secrets.APP_FAIR_FAIRSEAL_KEY }}
-        if: ${{ env.APP_FAIR_FAIRSEAL_KEY != '' }}
-        run: |
-          echo "APP_FAIR_FAIRSEAL_KEY: set"
-
-      - name: "Check XXXX Conditional"
-        env:
-          XXXX: ${{ secrets.XXXX }}
-        if: ${{ env.XXXX != '' }}
-        run: |
-          echo "XXXX: ${{ env.XXXX }}"
-
-      - name: "Check TestFlight"
-        env:
-          TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
-        run: |
-          echo "TESTFLIGHT_TEAMID: ${{ env.TESTFLIGHT_TEAMID }}"
-          echo "TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}"
-          echo "TESTFLIGHT_TEAMID: ${TESTFLIGHT_TEAMID}"
-          echo "PRODUCT_NAME: ${{ env.PRODUCT_NAME }}"
-
-      - name: "Check TestFlight Conditional"
-        env:
-          TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
-        if: ${{ env.TESTFLIGHT_TEAMID != '' }}
-        run: |
-          echo "TESTFLIGHT_TEAMID: ${{ env.TESTFLIGHT_TEAMID }}"
-
-          #- name: "Fail Always"
-          #if: always()
-          #run: |
-          #exit 1
- 
       - name: Checkout Base Fairground
         uses: actions/checkout@v2
 
@@ -498,6 +457,105 @@ jobs:
       - name: Get version tag
         id: get_semver_tag
         run: echo ::set-output name=semver_tag::$(xcodebuild -quiet -workspace ReleasePR/App.xcworkspace -showBuildSettings -json -scheme AppFairApp archive 2> /dev/null | jq '.[].buildSettings.MARKETING_VERSION' | cut -f 2 -d '"')
+
+
+      - name: "Check TestFlight"
+        env:
+          TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
+        run: |
+          echo "TESTFLIGHT_TEAMID: ${{ env.TESTFLIGHT_TEAMID }}"
+          echo "TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}"
+          echo "TESTFLIGHT_TEAMID: ${TESTFLIGHT_TEAMID}"
+          echo "PRODUCT_NAME: ${{ env.PRODUCT_NAME }}"
+
+      - name: "Check TestFlight Conditional"
+        env:
+          TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
+        if: ${{ env.TESTFLIGHT_TEAMID != '' }}
+        run: |
+          echo "TESTFLIGHT_TEAMID: ${{ env.TESTFLIGHT_TEAMID }}"
+
+      - name: "Configure TestFlight"
+        id: testflight
+        if: ${{ env.TESTFLIGHT_TEAMID != '' }}
+        run: |
+          echo "::set-output name=defined::true"
+          echo "::set-output name=enabled::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme AppFairApp archive 2>/dev/null | jq -r '.[].buildSettings.TESTFLIGHT_DEPLOY')"
+
+      - name: "Install fastlane"
+        if: ${{ steps.testflight.outputs.enabled == 'true' }}
+        run: |
+          mkdir -p .testflight
+          brew install fastlane
+
+      - name: "Create TestFlight App"
+        if: ${{ steps.testflight.outputs.enabled == 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
+          TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
+          TESTFLIGHT_ISSUER_ID: ${{ secrets.TESTFLIGHT_ISSUER_ID }}
+          TESTFLIGHT_KEY_ID: ${{ secrets.TESTFLIGHT_KEY_ID }}
+          TESTFLIGHT_KEY_CONTENTS: ${{ secrets.TESTFLIGHT_KEY_CONTENTS }}
+          TESTFLIGHT_CODESIGNING_IDENTITY: ${{ secrets.TESTFLIGHT_CODESIGNING_IDENTITY }}
+        run: |
+          cd ReleasePR/
+          echo "PRODUCT_BUNDLE_IDENTIFIER = org.appfair.${{ env.BUNDLE_ID }}" >> AppFairApp.xcconfig
+          mkdir fastlane/
+          cat > fastlane/Fastfile << EOF
+          default_platform(:ios)
+
+          platform :ios do
+            lane :configure do
+              app_store_connect_api_key({
+                key_id: ENV['TESTFLIGHT_KEY_ID'],
+                issuer_id: ENV['TESTFLIGHT_ISSUER_ID'],
+                key_content: ENV['TESTFLIGHT_KEY_CONTENTS'],
+              })
+
+              get_provisioning_profile({
+                app_identifier: ENV['PRODUCT_BUNDLE_IDENTIFIER'],
+                fail_on_name_taken: true,
+              })
+          
+              update_project_provisioning({
+                xcodeproj: "project.xcodeproj",
+                build_configuration: "Release",
+              })
+              update_project_team({
+                path: "project.xcodeproj",
+                teamid: ENV['TESTFLIGHT_TEAMID'],
+              })
+            end
+          
+            lane :build do
+              build_app({
+                clean: true,
+                scheme: "AppFairApp",
+                workspace: "App.xcworkspace",
+                export_method: "app-store",
+                output_directory: "fastlane/output/",
+                destination: "generic/platform=iOS",
+                skip_build_archive: false,
+                build_path: "fastlane/build",
+                result_bundle: false,
+                include_bitcode: false,
+                include_symbols: false,
+                sdk: "iphoneos",
+                export_team_id: ENV['TESTFLIGHT_TEAMID'],
+                codesigning_identity: ENV['TESTFLIGHT_CODESIGNING_IDENTITY'],
+              })
+            end
+          
+            lane :beta do
+              setup_ci if ENV['CI']
+              configure
+              build
+              upload_to_testflight
+            end
+          end
+          EOF
+
+          fastlane beta
 
       - name: Install fairtool
         run: |
@@ -574,20 +632,6 @@ jobs:
           echo "::set-output name=macos::$(xcodebuild -workspace ${{ env.IR_TARGET }}/App.xcworkspace -showBuildSettings -quiet -json -scheme AppFairApp archive 2>/dev/null | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'macosx' > /dev/null && echo enabled || echo disabled)"
           echo "::set-output name=ios::$(xcodebuild -workspace ${{ env.IR_TARGET }}/App.xcworkspace -showBuildSettings -quiet -json -scheme AppFairApp archive 2>/dev/null | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'iphoneos' > /dev/null && echo enabled || echo disabled)"
 
-      - name: "Configure TestFlight"
-        id: testflight
-        env:
-          TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
-        if: ${{ env.TESTFLIGHT_TEAMID != '' }}
-        run: |
-          echo "::set-output name=defined::true"
-          echo "::set-output name=enabled::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme AppFairApp archive 2>/dev/null | jq -r '.[].buildSettings.TESTFLIGHT_DEPLOY')"
-
-      - name: "Install fastlane"
-        if: ${{ steps.testflight.outputs.enabled == 'true' }}
-        run: |
-          mkdir -p .testflight
-          brew install fastlane
 
       - name: "Build iOS App"
         if: ${{ inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' }}
@@ -753,74 +797,6 @@ jobs:
 
           mv -f staging/.artifact_stash/* staging/ || true # restore stash
 
-      - name: "Create TestFlight App"
-        if: ${{ steps.testflight.outputs.enabled == 'true' }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
-          TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
-          TESTFLIGHT_ISSUER_ID: ${{ secrets.TESTFLIGHT_ISSUER_ID }}
-          TESTFLIGHT_KEY_ID: ${{ secrets.TESTFLIGHT_KEY_ID }}
-          TESTFLIGHT_KEY_CONTENTS: ${{ secrets.TESTFLIGHT_KEY_CONTENTS }}
-          TESTFLIGHT_CODESIGNING_IDENTITY: ${{ secrets.TESTFLIGHT_CODESIGNING_IDENTITY }}
-        run: |
-          cd ReleasePR/
-          echo "PRODUCT_BUNDLE_IDENTIFIER = org.appfair.${{ env.BUNDLE_ID }}" >> AppFairApp.xcconfig
-          mkdir fastlane/
-          cat > fastlane/Fastfile << EOF
-          default_platform(:ios)
-
-          platform :ios do
-            lane :configure do
-              app_store_connect_api_key({
-                key_id: ENV['TESTFLIGHT_KEY_ID'],
-                issuer_id: ENV['TESTFLIGHT_ISSUER_ID'],
-                key_content: ENV['TESTFLIGHT_KEY_CONTENTS'],
-              })
-
-              get_provisioning_profile({
-                app_identifier: ENV['PRODUCT_BUNDLE_IDENTIFIER'],
-                fail_on_name_taken: true,
-              })
-          
-              update_project_provisioning({
-                xcodeproj: "project.xcodeproj",
-                build_configuration: "Release",
-              })
-              update_project_team({
-                path: "project.xcodeproj",
-                teamid: ENV['TESTFLIGHT_TEAMID'],
-              })
-            end
-          
-            lane :build do
-              build_app({
-                clean: true,
-                scheme: "AppFairApp",
-                workspace: "App.xcworkspace",
-                export_method: "app-store",
-                output_directory: "fastlane/output/",
-                destination: "generic/platform=iOS",
-                skip_build_archive: false,
-                build_path: "fastlane/build",
-                result_bundle: false,
-                include_bitcode: false,
-                include_symbols: false,
-                sdk: "iphoneos",
-                export_team_id: ENV['TESTFLIGHT_TEAMID'],
-                codesigning_identity: ENV['TESTFLIGHT_CODESIGNING_IDENTITY'],
-              })
-            end
-          
-            lane :beta do
-              setup_ci if ENV['CI']
-              configure
-              build
-              upload_to_testflight
-            end
-          end
-          EOF
-
-          fastlane beta
 
       - name: "Publish Catalog"
         env:
