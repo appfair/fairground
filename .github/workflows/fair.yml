@@ -480,18 +480,12 @@ jobs:
         run: |
           cd ReleasePR
           echo "::set-output name=defined::true"
-          # check the 'TESTFLIGHT_DEPLOY' key in AppFairApp.xcconfig
-          echo "::set-output name=enabled::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme AppFairApp archive 2>/dev/null | jq -r '.[].buildSettings.TESTFLIGHT_DEPLOY')"
+          # check the 'TESTFLIGHT_DEPLOY_ID' key in AppFairApp.xcconfig
+          echo "::set-output name=appid::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme AppFairApp archive 2>/dev/null | jq -r '.[].buildSettings.TESTFLIGHT_DEPLOY_ID')"
           cd -
 
-      - name: "Install fastlane"
-        if: ${{ steps.testflight.outputs.enabled == 'true' }}
-        run: |
-          mkdir -p .testflight
-          brew install fastlane
-
-      - name: "Create TestFlight App"
-        if: ${{ steps.testflight.outputs.enabled == 'true' }}
+      - name: "Deploy TestFlight"
+        if: ${{ steps.testflight.outputs.appid != '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
           TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
@@ -501,7 +495,9 @@ jobs:
           TESTFLIGHT_CODESIGNING_IDENTITY: ${{ secrets.TESTFLIGHT_CODESIGNING_IDENTITY }}
         run: |
           cd ReleasePR/
+          cp AppFairApp.xcconfig AppFairApp.xcconfig.clean
           echo "PRODUCT_BUNDLE_IDENTIFIER = org.appfair.${{ env.BUNDLE_ID }}" >> AppFairApp.xcconfig
+          brew install fastlane
           mkdir fastlane/
           cat > fastlane/Fastfile << EOF
           default_platform(:ios)
@@ -558,6 +554,9 @@ jobs:
           EOF
 
           fastlane beta
+
+          # Restore the previous config
+          mv AppFairApp.xcconfig.clean AppFairApp.xcconfig
 
       - name: Install fairtool
         run: |
