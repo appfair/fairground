@@ -723,7 +723,7 @@ jobs:
           echo "::set-output name=appid::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme AppFairApp archive 2>/dev/null | jq -r '.[].buildSettings.TESTFLIGHT_APP_ID')"
 
       - name: "Deploy TestFlight ${{ steps.testflight.outputs.appid }}"
-        if: ${{ steps.testflight.outputs.appid != '' }}
+        if: ${{ steps.testflight.outputs.appid != null }}
         env:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
           TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
