@@ -646,7 +646,6 @@ jobs:
                 sdk: "iphoneos",
                 export_team_id: ENV['TESTFLIGHT_TEAMID'],
                 codesigning_identity: ENV['TESTFLIGHT_CODESIGNING_IDENTITY'],
-                xcargs: "PRODUCT_BUNDLE_IDENTIFIER='org.appfair.${{ env.BUNDLE_ID }}' DEVELOPMENT_TEAM='${{ env.TESTFLIGHT_TEAMID }}'",
               })
             end
           
