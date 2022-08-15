@@ -646,6 +646,7 @@ jobs:
                 sdk: "iphoneos",
                 export_team_id: ENV['TESTFLIGHT_TEAMID'],
                 codesigning_identity: ENV['TESTFLIGHT_CODESIGNING_IDENTITY'],
+                xcargs: "CODE_SIGN_STYLE='Manual'",
               })
             end
           
