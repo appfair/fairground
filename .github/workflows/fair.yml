@@ -624,6 +624,10 @@ jobs:
                 fail_on_name_taken: true,
                 skip_fetch_profiles: false,
               })
+
+              update_project_provisioning({
+                xcodeproj: "project.xcodeproj",
+              })
             end
           
             lane :build do
