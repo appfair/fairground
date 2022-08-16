@@ -162,7 +162,11 @@ jobs:
           brew install fair-ground/tool/fairtool-head
           fairtool-head version
 
-      - name: "Validate App: ${{ env.ORGNAME }}"
+      - name: Check Version
+        id: get_semver_tag
+        run: echo ::set-output name=semver_tag::$(xcodebuild -quiet -workspace ReleasePR/App.xcworkspace -showBuildSettings -json -scheme AppFairApp archive 2> /dev/null | jq -r '.[].buildSettings.MARKETING_VERSION')
+
+      - name: "Validate App: ${{ env.ORGNAME }} ${{ steps.get_semver_tag.outputs.semver_tag }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -445,16 +449,16 @@ jobs:
           # workflows may not be modified
           #diff -r .github/workflows/ ReleasePR/.github/workflows/
 
-      - name: Get version tag
-        id: get_semver_tag
-        run: echo ::set-output name=semver_tag::$(xcodebuild -quiet -workspace ReleasePR/App.xcworkspace -showBuildSettings -json -scheme AppFairApp archive 2> /dev/null | jq '.[].buildSettings.MARKETING_VERSION' | cut -f 2 -d '"')
-
       - name: Install fairtool
         run: |
           brew install fair-ground/tool/fairtool-head
           fairtool-head version
 
-      - name: "Validate App: ${{ env.ORGNAME }}"
+      - name: Check Version
+        id: get_semver_tag
+        run: echo ::set-output name=semver_tag::$(xcodebuild -quiet -workspace ReleasePR/App.xcworkspace -showBuildSettings -json -scheme AppFairApp archive 2> /dev/null | jq -r '.[].buildSettings.MARKETING_VERSION')
+
+      - name: "Validate App: ${{ env.ORGNAME }} ${{ steps.get_semver_tag.outputs.semver_tag }}"
         env:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
         run: |
@@ -702,15 +706,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
         run: |
           gh workflow --repo "${{ inputs.fairground }}/${{ inputs.fairground }}.github.io" run "catalog.yml"
-
-      - name: "Check TestFlight"
-        env:
-          TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
-        run: |
-          echo "TESTFLIGHT_TEAMID: ${{ env.TESTFLIGHT_TEAMID }}"
-          echo "TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}"
-          echo "TESTFLIGHT_TEAMID: ${TESTFLIGHT_TEAMID}"
-          echo "PRODUCT_NAME: ${{ env.PRODUCT_NAME }}"
 
       - name: "Configure TestFlight"
         id: testflight
