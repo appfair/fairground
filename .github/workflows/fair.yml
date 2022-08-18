@@ -121,7 +121,7 @@ jobs:
   # and a fairseal is published.
   fork_apply:
     name: "Fork Apply"
-    if: ${{ inputs.fairseal_issuer == '' }}
+    if: ${{ inputs.fairseal_issuer == '' && github.repository_owner != 'appfair' }}
     runs-on: macos-12
     timeout-minutes: 45
     steps:
@@ -166,7 +166,7 @@ jobs:
         id: get_semver_tag
         run: echo ::set-output name=semver_tag::$(xcodebuild -quiet -workspace ReleasePR/App.xcworkspace -showBuildSettings -json -scheme AppFairApp archive 2> /dev/null | jq -r '.[].buildSettings.MARKETING_VERSION')
 
-      - name: "Validate App: ${{ env.PRTITLE }}"
+      - name: "Validate App: ${{ env.ORGNAME }} ${{ steps.get_semver_tag.outputs.semver_tag }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -458,7 +458,7 @@ jobs:
         id: get_semver_tag
         run: echo ::set-output name=semver_tag::$(xcodebuild -quiet -workspace ReleasePR/App.xcworkspace -showBuildSettings -json -scheme AppFairApp archive 2> /dev/null | jq -r '.[].buildSettings.MARKETING_VERSION')
 
-      - name: "Validate App: ${{ env.ORGNAME }} ${{ steps.get_semver_tag.outputs.semver_tag }}"
+      - name: "Validate App: ${{ env.PRTITLE }}"
         env:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
         run: |
