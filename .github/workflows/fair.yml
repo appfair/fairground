@@ -166,7 +166,7 @@ jobs:
         id: get_semver_tag
         run: echo ::set-output name=semver_tag::$(xcodebuild -quiet -workspace ReleasePR/App.xcworkspace -showBuildSettings -json -scheme AppFairApp archive 2> /dev/null | jq -r '.[].buildSettings.MARKETING_VERSION')
 
-      - name: "Validate App: ${{ env.ORGNAME }} ${{ steps.get_semver_tag.outputs.semver_tag }}"
+      - name: "Validate App: ${{ env.PRTITLE }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -717,8 +717,8 @@ jobs:
           # check the 'TESTFLIGHT_APP_ID' key in AppFairApp.xcconfig
           echo "::set-output name=appid::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme AppFairApp archive 2>/dev/null | jq -r '.[].buildSettings.TESTFLIGHT_APP_ID')"
 
-      - name: "Deploy TestFlight ${{ steps.testflight.outputs.appid }}"
-        if: ${{ env.TESTFLIGHT_TEAMID != '' && steps.testflight.outputs.appid != '' }}
+      - name: "Deploy iOS TestFlight"
+        if: ${{ inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.testflight.outputs.appid != null && steps.testflight.outputs.appid != '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
           TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
@@ -847,6 +847,19 @@ jobs:
           # Cleanup and restore the previous config
           rm -rf fastlane/
           mv AppFairApp.xcconfig.clean AppFairApp.xcconfig
+
+      - name: "Deploy macOS TestFlight"
+        if: ${{ inputs.target_macos == true && steps.platforms.outputs.macos == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.testflight.outputs.appid != null && steps.testflight.outputs.appid != '' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
+          TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
+          TESTFLIGHT_ISSUER_ID: ${{ secrets.TESTFLIGHT_ISSUER_ID }}
+          TESTFLIGHT_KEY_ID: ${{ secrets.TESTFLIGHT_KEY_ID }}
+          TESTFLIGHT_KEY_CONTENTS: ${{ secrets.TESTFLIGHT_KEY_CONTENTS }}
+          TESTFLIGHT_CODESIGNING_IDENTITY: ${{ secrets.TESTFLIGHT_CODESIGNING_IDENTITY }}
+        run: |
+          # TODO
+          # mkdir fastlane/
 
       - name: "Upload Reproducible Build"
         # upload the trusted artifacts for each build for reproducible-builds
