@@ -825,7 +825,7 @@ jobs:
           # Fastlane quirk: if the platforms include "osx", then iOS won't work
           SUPPORTED_PLATFORMS: iphoneos
         run: |
-          fastlane beta
+          FASTLANE_PROFILE_PLATFORM=ios PLATFORM_NAME=iphoneos SUPPORTED_PLATFORMS=iphoneos fastlane beta
 
       - name: "Deploy macOS TestFlight"
         if: ${{ inputs.target_macos == true && steps.platforms.outputs.macos == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.testflight.outputs.appid != null && steps.testflight.outputs.appid != '' }}
@@ -843,7 +843,7 @@ jobs:
           PLATFORM_NAME: macosx
           SUPPORTED_PLATFORMS: macosx
         run: |
-          fastlane beta
+          FASTLANE_PROFILE_PLATFORM=macos PLATFORM_NAME=macosx SUPPORTED_PLATFORMS=macosx fastlane beta
 
       - name: "Upload Reproducible Build"
         # upload the trusted artifacts for each build for reproducible-builds
