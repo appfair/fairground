@@ -532,37 +532,28 @@ jobs:
 
 
 
-
-
-
-
       # TODO: move to after "Publish Catalog"
       - name: "Check TestFlight Eligibility"
         id: testflight
         if: ${{ env.TESTFLIGHT_TEAMID != '' }}
         env:
           TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
-          TESTFLIGHT_BUNDLE_PREFIX: 'org.appfair.'
         run: |
           echo "::set-output name=defined::true"
           # check the 'TESTFLIGHT_APP_ID' key in AppFairApp.xcconfig
           echo "::set-output name=appid::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme AppFairApp archive 2>/dev/null | jq -r '.[].buildSettings.TESTFLIGHT_APP_ID')"
-          echo "TESTFLIGHT_BUNDLE_PREFIX=${{ env.TESTFLIGHT_BUNDLE_PREFIX }}" >> $GITHUB_ENV
+
 
       - name: "Configure TestFlight"
         if: ${{ inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.testflight.outputs.appid != null && steps.testflight.outputs.appid != '' }}
         env:
+          TESTFLIGHT_BUNDLE_PREFIX: 'org.appfair'
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
           TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
           TESTFLIGHT_ISSUER_ID: ${{ secrets.TESTFLIGHT_ISSUER_ID }}
           TESTFLIGHT_KEY_ID: ${{ secrets.TESTFLIGHT_KEY_ID }}
           TESTFLIGHT_KEY_CONTENTS: ${{ secrets.TESTFLIGHT_KEY_CONTENTS }}
           TESTFLIGHT_CODESIGNING_IDENTITY: ${{ secrets.TESTFLIGHT_CODESIGNING_IDENTITY }}
-          FASTLANE_PROFILE_PLATFORM: ios
-          FASTLANE_DESTINATION: generic/platform=iOS
-          PLATFORM_NAME: iphoneos
-          SUPPORTED_PLATFORMS: iphoneos
-          CI: true
         run: |
           mkdir fastlane/
           brew install fastlane
@@ -575,11 +566,10 @@ jobs:
               key_content: ENV['TESTFLIGHT_KEY_CONTENTS'],
             })
             get_provisioning_profile({
-              app_identifier: "org.appfair.${{ env.BUNDLE_ID }}",
-              force: true,
               platform: ENV['FASTLANE_PROFILE_PLATFORM'],
-              fail_on_name_taken: true,
-              skip_fetch_profiles: false,
+              app_identifier: "${{ env.TESTFLIGHT_BUNDLE_PREFIX}}.${{ env.BUNDLE_ID }}",
+              force: true,
+              fail_on_name_taken: false,
             })
             update_project_provisioning({
               xcodeproj: "project.xcodeproj",
@@ -639,6 +629,8 @@ jobs:
           echo "PRODUCT_BUNDLE_IDENTIFIER = org.appfair.${{ env.BUNDLE_ID }}" >> AppFairApp.xcconfig
           echo "DEVELOPMENT_TEAM = ${{ env.TESTFLIGHT_TEAMID }}" >> AppFairApp.xcconfig
 
+
+
       - name: "TestFlight iOS"
         if: ${{ inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.testflight.outputs.appid != null && steps.testflight.outputs.appid != '' }}
         env:
@@ -677,9 +669,6 @@ jobs:
         run: |
           echo "SUPPORTED_PLATFORMS = macosx" >> AppFairApp.xcconfig
           fastlane beta
-
-
-
 
 
       - name: "TestFlight Cleanup"
