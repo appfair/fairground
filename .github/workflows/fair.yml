@@ -719,7 +719,7 @@ jobs:
           echo "::set-output name=appid::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme AppFairApp archive 2>/dev/null | jq -r '.[].buildSettings.TESTFLIGHT_APP_ID')"
           echo "TESTFLIGHT_BUNDLE_PREFIX=${{ env.TESTFLIGHT_BUNDLE_PREFIX }}" >> $GITHUB_ENV
 
-      - name: "TestFlight Deploy iOS (Legacy)"
+      - name: "Configure TestFlight"
         if: ${{ inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.testflight.outputs.appid != null && steps.testflight.outputs.appid != '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
@@ -806,14 +806,30 @@ jobs:
           end
           EOF
 
-          CI=true fastlane beta
 
+      - name: "TestFlight iOS"
+        if: ${{ inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.testflight.outputs.appid != null && steps.testflight.outputs.appid != '' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
+          TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
+          TESTFLIGHT_ISSUER_ID: ${{ secrets.TESTFLIGHT_ISSUER_ID }}
+          TESTFLIGHT_KEY_ID: ${{ secrets.TESTFLIGHT_KEY_ID }}
+          TESTFLIGHT_KEY_CONTENTS: ${{ secrets.TESTFLIGHT_KEY_CONTENTS }}
+          TESTFLIGHT_CODESIGNING_IDENTITY: ${{ secrets.TESTFLIGHT_CODESIGNING_IDENTITY }}
+          FASTLANE_PROFILE_PLATFORM: ios
+          FASTLANE_DESTINATION: generic/platform=iOS
+          PLATFORM_NAME: iphoneos
+          SUPPORTED_PLATFORMS: iphoneos
+          CI: true
+        run: |
+          fastlane beta
           # Cleanup and restore the previous config
-          rm -rf fastlane/
+          #rm -rf fastlane/
           mv AppFairApp.xcconfig.clean AppFairApp.xcconfig
 
-      - name: "Configure TestFlight"
-        if: ${{ env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.testflight.outputs.appid != null && steps.testflight.outputs.appid != '' }}
+      - name: "Configure TestFlight (old)"
+        if: false
+        #if: ${{ env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.testflight.outputs.appid != null && steps.testflight.outputs.appid != '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
           TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
@@ -905,8 +921,9 @@ jobs:
           end
           EOF
 
-      - name: "Deploy iOS TestFlight"
-        if: ${{ inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.testflight.outputs.appid != null && steps.testflight.outputs.appid != '' }}
+      - name: "Deploy iOS TestFlight (old)"
+        if: false
+        #if: ${{ inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.testflight.outputs.appid != null && steps.testflight.outputs.appid != '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
           TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
@@ -923,8 +940,9 @@ jobs:
         run: |
           FASTLANE_DESTINATION="generic/platform=iOS" FASTLANE_PROFILE_PLATFORM="ios" PLATFORM_NAME="iphoneos" SUPPORTED_PLATFORMS="iphoneos" fastlane beta
 
-      - name: "Deploy macOS TestFlight"
-        if: ${{ inputs.target_macos == true && steps.platforms.outputs.macos == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.testflight.outputs.appid != null && steps.testflight.outputs.appid != '' }}
+      - name: "Deploy macOS TestFlight (old)"
+        if: false
+        #if: ${{ inputs.target_macos == true && steps.platforms.outputs.macos == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.testflight.outputs.appid != null && steps.testflight.outputs.appid != '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
           TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
