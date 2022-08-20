@@ -734,7 +734,6 @@ jobs:
           SUPPORTED_PLATFORMS: iphoneos
           CI: true
         run: |
-          cp AppFairApp.xcconfig AppFairApp.xcconfig.clean
           mkdir fastlane/
           brew install fastlane
 
@@ -805,6 +804,11 @@ jobs:
           # show valid identities
           security find-identity -v
 
+          # Update config with re-bundled identifier
+          cp AppFairApp.xcconfig AppFairApp.xcconfig.clean
+          echo "PRODUCT_BUNDLE_IDENTIFIER = org.appfair.${{ env.BUNDLE_ID }}" >> AppFairApp.xcconfig
+          echo "DEVELOPMENT_TEAM = ${{ env.TESTFLIGHT_TEAMID }}" >> AppFairApp.xcconfig
+
       - name: "TestFlight iOS"
         if: ${{ inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.testflight.outputs.appid != null && steps.testflight.outputs.appid != '' }}
         env:
@@ -820,8 +824,6 @@ jobs:
           SUPPORTED_PLATFORMS: iphoneos
           CI: true
         run: |
-          echo "PRODUCT_BUNDLE_IDENTIFIER = org.appfair.${{ env.BUNDLE_ID }}" >> AppFairApp.xcconfig
-          echo "DEVELOPMENT_TEAM = ${{ env.TESTFLIGHT_TEAMID }}" >> AppFairApp.xcconfig
           # Fastlane bug: if the platforms include "osx", then iOS won't work
           echo "SUPPORTED_PLATFORMS = iphoneos" >> AppFairApp.xcconfig
           fastlane beta
@@ -835,14 +837,12 @@ jobs:
           TESTFLIGHT_KEY_ID: ${{ secrets.TESTFLIGHT_KEY_ID }}
           TESTFLIGHT_KEY_CONTENTS: ${{ secrets.TESTFLIGHT_KEY_CONTENTS }}
           TESTFLIGHT_CODESIGNING_IDENTITY: ${{ secrets.TESTFLIGHT_CODESIGNING_IDENTITY }}
-          FASTLANE_PROFILE_PLATFORM: ios
+          FASTLANE_PROFILE_PLATFORM: macos
           FASTLANE_DESTINATION: platform=macOS
           PLATFORM_NAME: macosx
           SUPPORTED_PLATFORMS: macosx
           CI: true
         run: |
-          echo "PRODUCT_BUNDLE_IDENTIFIER = org.appfair.${{ env.BUNDLE_ID }}" >> AppFairApp.xcconfig
-          echo "DEVELOPMENT_TEAM = ${{ env.TESTFLIGHT_TEAMID }}" >> AppFairApp.xcconfig
           echo "SUPPORTED_PLATFORMS = macosx" >> AppFairApp.xcconfig
           fastlane beta
 
