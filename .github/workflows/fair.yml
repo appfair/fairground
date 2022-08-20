@@ -720,7 +720,7 @@ jobs:
           echo "TESTFLIGHT_BUNDLE_PREFIX=${{ env.TESTFLIGHT_BUNDLE_PREFIX }}" >> $GITHUB_ENV
 
       - name: "TestFlight Deploy iOS (Legacy)"
-if: ${{ inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.testflight.outputs.appid != null && steps.testflight.outputs.appid != '' }}
+        if: ${{ inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.testflight.outputs.appid != null && steps.testflight.outputs.appid != '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
           TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
