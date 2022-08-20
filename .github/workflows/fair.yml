@@ -728,6 +728,11 @@ jobs:
           TESTFLIGHT_KEY_ID: ${{ secrets.TESTFLIGHT_KEY_ID }}
           TESTFLIGHT_KEY_CONTENTS: ${{ secrets.TESTFLIGHT_KEY_CONTENTS }}
           TESTFLIGHT_CODESIGNING_IDENTITY: ${{ secrets.TESTFLIGHT_CODESIGNING_IDENTITY }}
+          FASTLANE_PROFILE_PLATFORM: ios
+          FASTLANE_DESTINATION: generic/platform=iOS
+          PLATFORM_NAME: iphoneos
+          SUPPORTED_PLATFORMS: iphoneos
+          CI: true
         run: |
           mkdir fastlane/
           security delete-keychain appstore.keychain || true
@@ -764,7 +769,7 @@ jobs:
             get_provisioning_profile({
               app_identifier: "org.appfair.${{ env.BUNDLE_ID }}",
               force: true,
-              platform: "ios",
+              platform: ENV['FASTLANE_PROFILE_PLATFORM'],
               fail_on_name_taken: true,
               skip_fetch_profiles: false,
             })
@@ -780,13 +785,10 @@ jobs:
               workspace: "App.xcworkspace",
               export_method: "app-store",
               output_directory: "fastlane/output/",
-              destination: "generic/platform=iOS",
-              skip_build_archive: false,
               build_path: "fastlane/build",
-              result_bundle: false,
-              include_bitcode: false,
               include_symbols: true,
-              sdk: "iphoneos",
+              sdk: ENV['PLATFORM_NAME'],
+              destination: ENV['FASTLANE_DESTINATION'],
               export_team_id: ENV['TESTFLIGHT_TEAMID'],
               codesigning_identity: ENV['TESTFLIGHT_CODESIGNING_IDENTITY'],
               xcargs: "CODE_SIGN_STYLE='Manual'",
@@ -817,6 +819,10 @@ jobs:
           TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
           TESTFLIGHT_ISSUER_ID: ${{ secrets.TESTFLIGHT_ISSUER_ID }}
           TESTFLIGHT_KEY_ID: ${{ secrets.TESTFLIGHT_KEY_ID }}
+          FASTLANE_PROFILE_PLATFORM: ios
+          FASTLANE_DESTINATION: generic/platform=iOS
+          PLATFORM_NAME: iphoneos
+          SUPPORTED_PLATFORMS: iphoneos
         run: |
           mkdir fastlane/
 
@@ -866,7 +872,6 @@ jobs:
               fail_on_name_taken: true,
               skip_fetch_profiles: false,
             })
-
             update_project_provisioning({
               xcodeproj: "project.xcodeproj",
             })
