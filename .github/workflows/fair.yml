@@ -734,31 +734,10 @@ jobs:
           SUPPORTED_PLATFORMS: iphoneos
           CI: true
         run: |
-          mkdir fastlane/
-          security delete-keychain appstore.keychain || true
-          security create-keychain -p "${{ secrets.TESTFLIGHT_CERTKEY_PASSWORD }}" appstore.keychain
-          security default-keychain -s appstore.keychain
-          security list-keychains -s appstore.keychain
-          # import certificate
-          echo "${{ secrets.TESTFLIGHT_CERTKEY_P12_BASE64 }}" | base64 -d -o fastlane/appstore.p12
-          security import fastlane/appstore.p12 -k appstore.keychain -P "${{ secrets.TESTFLIGHT_CERTKEY_PASSWORD }}" -A
-          rm -f fastlane/appstore.p12
-          security set-key-partition-list -S "apple-tool:,apple:,codesign:" -s -k "${{ secrets.TESTFLIGHT_CERTKEY_PASSWORD }}" appstore.keychain
-          # show valid identities
-          security find-identity -v
           cp AppFairApp.xcconfig AppFairApp.xcconfig.clean
-          echo "PRODUCT_BUNDLE_IDENTIFIER = org.appfair.${{ env.BUNDLE_ID }}" >> AppFairApp.xcconfig
-          echo "DEVELOPMENT_TEAM = ${{ env.TESTFLIGHT_TEAMID }}" >> AppFairApp.xcconfig
-          # Fastlane bug: if the platforms include "osx", then iOS won't work
-          echo "SUPPORTED_PLATFORMS = iphoneos" >> AppFairApp.xcconfig
-          # Fastlane requires that scheme be shared,
-          # but we rely on auto-generated schemes,
-          # so generate a shell scheme for AppFairApp
-          mkdir -p App.xcworkspace/xcshareddata/xcschemes/
-
-          echo '<?xml version="1.0" encoding="UTF-8"?> <Scheme LastUpgradeVersion = "1340" version = "1.3"> <BuildAction parallelizeBuildables = "YES" buildImplicitDependencies = "YES"> <BuildActionEntries> <BuildActionEntry buildForTesting = "YES" buildForRunning = "YES" buildForProfiling = "YES" buildForArchiving = "YES" buildForAnalyzing = "YES"> <BuildableReference BuildableIdentifier = "primary" BlueprintName = "AppFairApp" ReferencedContainer = "container:project.xcodeproj"> </BuildableReference> </BuildActionEntry> </BuildActionEntries> </BuildAction> <ArchiveAction buildConfiguration = "Release" revealArchiveInOrganizer = "YES"> </ArchiveAction> </Scheme>' > App.xcworkspace/xcshareddata/xcschemes/AppFairApp.xcscheme
-
+          mkdir fastlane/
           brew install fastlane
+
           cat > fastlane/Fastfile << EOF
           lane :configure do
             app_store_connect_api_key({
@@ -806,6 +785,25 @@ jobs:
           end
           EOF
 
+          # Fastlane requires that scheme be shared,
+          # but we rely on auto-generated schemes,
+          # so generate a shell scheme for AppFairApp
+          mkdir -p App.xcworkspace/xcshareddata/xcschemes/
+
+          echo '<?xml version="1.0" encoding="UTF-8"?> <Scheme LastUpgradeVersion = "1340" version = "1.3"> <BuildAction parallelizeBuildables = "YES" buildImplicitDependencies = "YES"> <BuildActionEntries> <BuildActionEntry buildForTesting = "YES" buildForRunning = "YES" buildForProfiling = "YES" buildForArchiving = "YES" buildForAnalyzing = "YES"> <BuildableReference BuildableIdentifier = "primary" BlueprintName = "AppFairApp" ReferencedContainer = "container:project.xcodeproj"> </BuildableReference> </BuildActionEntry> </BuildActionEntries> </BuildAction> <ArchiveAction buildConfiguration = "Release" revealArchiveInOrganizer = "YES"> </ArchiveAction> </Scheme>' > App.xcworkspace/xcshareddata/xcschemes/AppFairApp.xcscheme
+
+          security delete-keychain appstore.keychain || true
+          security create-keychain -p "${{ secrets.TESTFLIGHT_CERTKEY_PASSWORD }}" appstore.keychain
+          security default-keychain -s appstore.keychain
+          security list-keychains -s appstore.keychain
+          # import certificate
+          echo "${{ secrets.TESTFLIGHT_CERTKEY_P12_BASE64 }}" | base64 -d -o fastlane/appstore.p12
+          security import fastlane/appstore.p12 -k appstore.keychain -P "${{ secrets.TESTFLIGHT_CERTKEY_PASSWORD }}" -A
+          rm -f fastlane/appstore.p12
+          security set-key-partition-list -S "apple-tool:,apple:,codesign:" -s -k "${{ secrets.TESTFLIGHT_CERTKEY_PASSWORD }}" appstore.keychain
+
+          # show valid identities
+          security find-identity -v
 
       - name: "TestFlight iOS"
         if: ${{ inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.testflight.outputs.appid != null && steps.testflight.outputs.appid != '' }}
@@ -822,108 +820,14 @@ jobs:
           SUPPORTED_PLATFORMS: iphoneos
           CI: true
         run: |
-          fastlane beta
-          # Cleanup and restore the previous config
-          #rm -rf fastlane/
-          mv AppFairApp.xcconfig.clean AppFairApp.xcconfig
-
-      - name: "Configure TestFlight (old)"
-        if: false
-        #if: ${{ env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.testflight.outputs.appid != null && steps.testflight.outputs.appid != '' }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
-          TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
-          TESTFLIGHT_ISSUER_ID: ${{ secrets.TESTFLIGHT_ISSUER_ID }}
-          TESTFLIGHT_KEY_ID: ${{ secrets.TESTFLIGHT_KEY_ID }}
-          FASTLANE_PROFILE_PLATFORM: ios
-          FASTLANE_DESTINATION: generic/platform=iOS
-          PLATFORM_NAME: iphoneos
-          SUPPORTED_PLATFORMS: iphoneos
-        run: |
-          mkdir fastlane/
-
-          security delete-keychain appstore.keychain || true
-          security create-keychain -p "${{ secrets.TESTFLIGHT_CERTKEY_PASSWORD }}" appstore.keychain
-          security default-keychain -s appstore.keychain
-          security list-keychains -s appstore.keychain
-
-          # import certificate
-          echo "${{ secrets.TESTFLIGHT_CERTKEY_P12_BASE64 }}" | base64 -d -o fastlane/appstore.p12
-          security import fastlane/appstore.p12 -k appstore.keychain -P "${{ secrets.TESTFLIGHT_CERTKEY_PASSWORD }}" -A
-          rm -f fastlane/appstore.p12
-
-          security set-key-partition-list -S "apple-tool:,apple:,codesign:" -s -k "${{ secrets.TESTFLIGHT_CERTKEY_PASSWORD }}" appstore.keychain
-
-          # show valid identities
-          security find-identity -v
-
-          cp AppFairApp.xcconfig AppFairApp.xcconfig.clean
-
-          # Switch to the TestFlight org
-          echo "PRODUCT_BUNDLE_IDENTIFIER = ${{ env.TESTFLIGHT_BUNDLE_PREFIX }}${{ env.BUNDLE_ID }}" >> AppFairApp.xcconfig
+          echo "PRODUCT_BUNDLE_IDENTIFIER = org.appfair.${{ env.BUNDLE_ID }}" >> AppFairApp.xcconfig
           echo "DEVELOPMENT_TEAM = ${{ env.TESTFLIGHT_TEAMID }}" >> AppFairApp.xcconfig
+          # Fastlane bug: if the platforms include "osx", then iOS won't work
+          echo "SUPPORTED_PLATFORMS = iphoneos" >> AppFairApp.xcconfig
+          fastlane beta
 
-
-          # Fastlane requires that scheme be shared,
-          # but App expects auto-generated schemes,
-          # so generate a shell scheme for AppFairApp
-          mkdir -p App.xcworkspace/xcshareddata/xcschemes/
-          echo '<?xml version="1.0" encoding="UTF-8"?><Scheme LastUpgradeVersion = "1340" version = "1.3"> <BuildAction parallelizeBuildables = "YES" buildImplicitDependencies = "YES"> <BuildActionEntries> <BuildActionEntry buildForTesting = "YES" buildForRunning = "YES" buildForProfiling = "YES" buildForArchiving = "YES" buildForAnalyzing = "YES"> <BuildableReference BuildableIdentifier = "primary" BlueprintName = "AppFairApp" ReferencedContainer = "container:project.xcodeproj"> </BuildableReference> </BuildActionEntry> </BuildActionEntries> </BuildAction> <ArchiveAction buildConfiguration = "Release" revealArchiveInOrganizer = "YES"> </ArchiveAction> </Scheme>' > App.xcworkspace/xcshareddata/xcschemes/AppFairApp.xcscheme
-
-
-          brew install fastlane
-
-          cat > fastlane/Fastfile << EOF
-          lane :configure do
-            app_store_connect_api_key({
-              key_id: ENV['TESTFLIGHT_KEY_ID'],
-              issuer_id: ENV['TESTFLIGHT_ISSUER_ID'],
-              key_content: ENV['TESTFLIGHT_KEY_CONTENTS'],
-            })
-
-            get_provisioning_profile({
-              app_identifier: "${{ env.TESTFLIGHT_BUNDLE_PREFIX }}${{ env.BUNDLE_ID }}",
-              force: true,
-              platform: ENV['FASTLANE_PROFILE_PLATFORM'],
-              fail_on_name_taken: true,
-              skip_fetch_profiles: false,
-            })
-            update_project_provisioning({
-              xcodeproj: "project.xcodeproj",
-            })
-          end
-        
-          lane :build do
-            build_app({
-              clean: true,
-              scheme: "AppFairApp",
-              workspace: "App.xcworkspace",
-              export_method: "app-store",
-              output_directory: "fastlane/output/",
-              build_path: "fastlane/build",
-              include_symbols: true,
-              sdk: ENV['PLATFORM_NAME'],
-              destination: ENV['FASTLANE_DESTINATION'],
-              export_team_id: ENV['TESTFLIGHT_TEAMID'],
-              codesigning_identity: ENV['TESTFLIGHT_CODESIGNING_IDENTITY'],
-              xcargs: "CODE_SIGN_STYLE='Manual'",
-            })
-          end
-        
-          lane :beta do
-            setup_ci if ENV['CI']
-            configure
-            build
-            upload_to_testflight({
-              skip_submission: false,
-              skip_waiting_for_build_processing: false,
-            })
-          end
-          EOF
-
-      - name: "Deploy iOS TestFlight (old)"
-        if: false
-        #if: ${{ inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.testflight.outputs.appid != null && steps.testflight.outputs.appid != '' }}
+      - name: "TestFlight macOS"
+        if: ${{ inputs.target_macos == true && steps.platforms.outputs.macos == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.testflight.outputs.appid != null && steps.testflight.outputs.appid != '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
           TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
@@ -931,33 +835,23 @@ jobs:
           TESTFLIGHT_KEY_ID: ${{ secrets.TESTFLIGHT_KEY_ID }}
           TESTFLIGHT_KEY_CONTENTS: ${{ secrets.TESTFLIGHT_KEY_CONTENTS }}
           TESTFLIGHT_CODESIGNING_IDENTITY: ${{ secrets.TESTFLIGHT_CODESIGNING_IDENTITY }}
-          CI: true
           FASTLANE_PROFILE_PLATFORM: ios
-          FASTLANE_DESTINATION: generic/platform=iOS
-          PLATFORM_NAME: iphoneos
-          # Fastlane quirk: if the platforms include "osx", then iOS won't work
-          SUPPORTED_PLATFORMS: iphoneos
-        run: |
-          FASTLANE_DESTINATION="generic/platform=iOS" FASTLANE_PROFILE_PLATFORM="ios" PLATFORM_NAME="iphoneos" SUPPORTED_PLATFORMS="iphoneos" fastlane beta
-
-      - name: "Deploy macOS TestFlight (old)"
-        if: false
-        #if: ${{ inputs.target_macos == true && steps.platforms.outputs.macos == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.testflight.outputs.appid != null && steps.testflight.outputs.appid != '' }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
-          TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
-          TESTFLIGHT_ISSUER_ID: ${{ secrets.TESTFLIGHT_ISSUER_ID }}
-          TESTFLIGHT_KEY_ID: ${{ secrets.TESTFLIGHT_KEY_ID }}
-          TESTFLIGHT_KEY_CONTENTS: ${{ secrets.TESTFLIGHT_KEY_CONTENTS }}
-          TESTFLIGHT_CODESIGNING_IDENTITY: ${{ secrets.TESTFLIGHT_CODESIGNING_IDENTITY }}
-          CI: true
-          FASTLANE_PROFILE_PLATFORM: macos
           FASTLANE_DESTINATION: platform=macOS
-          # Fastlane quirk: PLATFORM_NAME or mac_app? in project.rb fails to detect macOS app
           PLATFORM_NAME: macosx
           SUPPORTED_PLATFORMS: macosx
+          CI: true
         run: |
-          FASTLANE_DESTINATION="platform=macOS" FASTLANE_PROFILE_PLATFORM="macos" PLATFORM_NAME="macosx" SUPPORTED_PLATFORMS="macosx" fastlane beta
+          echo "PRODUCT_BUNDLE_IDENTIFIER = org.appfair.${{ env.BUNDLE_ID }}" >> AppFairApp.xcconfig
+          echo "DEVELOPMENT_TEAM = ${{ env.TESTFLIGHT_TEAMID }}" >> AppFairApp.xcconfig
+          echo "SUPPORTED_PLATFORMS = macosx" >> AppFairApp.xcconfig
+          fastlane beta
+
+      - name: "TestFlight Cleanup"
+        if: ${{ env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.testflight.outputs.appid != null && steps.testflight.outputs.appid != '' }}
+        run: |
+          # Cleanup and restore the previous config
+          rm -rf fastlane/
+          mv AppFairApp.xcconfig.clean AppFairApp.xcconfig
 
       - name: "Upload Reproducible Build"
         # upload the trusted artifacts for each build for reproducible-builds
