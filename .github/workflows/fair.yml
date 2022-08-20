@@ -543,7 +543,7 @@ jobs:
 
 
       - name: "Configure PreFlight"
-        if: ${{ inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.testflight.outputs.appid != null && steps.testflight.outputs.appid != '' }}
+        if: ${{ inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.preflight.outputs.appid != null && steps.preflight.outputs.appid != '' }}
         env:
           TESTFLIGHT_BUNDLE_PREFIX: 'org.appfair'
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
@@ -630,7 +630,7 @@ jobs:
 
 
       - name: "PreFlight macOS"
-        if: ${{ inputs.target_macos == true && steps.platforms.outputs.macos == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.testflight.outputs.appid != null && steps.testflight.outputs.appid != '' }}
+        if: ${{ inputs.target_macos == true && steps.platforms.outputs.macos == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.preflight.outputs.appid != null && steps.preflight.outputs.appid != '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
           TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
@@ -650,7 +650,7 @@ jobs:
 
 
       - name: "PreFlight iOS"
-        if: ${{ inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.testflight.outputs.appid != null && steps.testflight.outputs.appid != '' }}
+        if: ${{ inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.preflight.outputs.appid != null && steps.preflight.outputs.appid != '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
           TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
@@ -671,7 +671,7 @@ jobs:
 
 
       - name: "PreFlight Cleanup"
-        if: ${{ env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.testflight.outputs.appid != null && steps.testflight.outputs.appid != '' }}
+        if: ${{ env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.preflight.outputs.appid != null && steps.preflight.outputs.appid != '' }}
         run: |
           # Cleanup and restore the previous config
           rm -rf fastlane/
