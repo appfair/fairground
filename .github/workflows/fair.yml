@@ -516,21 +516,20 @@ jobs:
       - name: "Check Repository Page: https://${{ env.ORGNAME }}.github.io/App"
         run: curl --location --fail -s "${{ env.ORGNAME }}.github.io/App" | grep "https://appfair.app/fair?app=${{ env.ORGNAME }}"
 
-      - name: "Generate Icon"
-        run: |
-          cd "${{ env.IR_TARGET }}"
-          fairtool-head fair icon --org "${{ env.ORGNAME }}" --fair-properties "AppFairApp.xcconfig" --accent-color Assets.xcassets/AccentColor.colorset/Contents.json --app-icon Assets.xcassets/AppIcon.appiconset/Contents.json
-          cd -
-
       - name: "Configure Deployment Platforms"
         id: platforms
         run: |
           echo "::set-output name=macos::$(xcodebuild -workspace ${{ env.IR_TARGET }}/App.xcworkspace -showBuildSettings -quiet -json -scheme AppFairApp archive 2>/dev/null | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'macosx' > /dev/null && echo enabled || echo disabled)"
           echo "::set-output name=ios::$(xcodebuild -workspace ${{ env.IR_TARGET }}/App.xcworkspace -showBuildSettings -quiet -json -scheme AppFairApp archive 2>/dev/null | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'iphoneos' > /dev/null && echo enabled || echo disabled)"
 
+      - name: "Generate Icon"
+        run: |
+          cd "${{ env.IR_TARGET }}"
+          fairtool-head fair icon --org "${{ env.ORGNAME }}" --fair-properties "AppFairApp.xcconfig" --accent-color Assets.xcassets/AccentColor.colorset/Contents.json --app-icon Assets.xcassets/AppIcon.appiconset/Contents.json
+          cd -
 
 
-      # TODO: move PreFlight steps to after "Publish Catalog"
+      # TODO: move PreFlight steps to after "Publish Catalog" instead of "Generate Icon"
       - name: "Check PreFlight Eligibility"
         id: preflight
         if: ${{ env.TESTFLIGHT_TEAMID != '' }}
@@ -543,7 +542,7 @@ jobs:
 
 
       - name: "Configure PreFlight"
-        if: ${{ inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.preflight.outputs.appid != null && steps.preflight.outputs.appid != '' }}
+        if: ${{ env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.preflight.outputs.appid != null && steps.preflight.outputs.appid != '' }}
         env:
           TESTFLIGHT_BUNDLE_PREFIX: 'org.appfair'
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
@@ -630,7 +629,9 @@ jobs:
 
 
       - name: "PreFlight macOS"
-        if: ${{ inputs.target_macos == true && steps.platforms.outputs.macos == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.preflight.outputs.appid != null && steps.preflight.outputs.appid != '' }}
+        # disabled until we can get it working (error during gym 2.209.0: exportArchive: No signing certificate "Mac Installer Distribution" found)
+        if: false
+        #if: ${{ inputs.target_macos == true && steps.platforms.outputs.macos == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.preflight.outputs.appid != null && steps.preflight.outputs.appid != '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
           TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
