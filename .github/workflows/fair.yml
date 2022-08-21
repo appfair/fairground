@@ -172,7 +172,7 @@ jobs:
         run: |
           # needed to be able to ad-hoc codesign embedded frameworks
           plutil -replace 'com\.apple\.security\.cs\.disable-library-validation' -bool true Sandbox.entitlements
-          fairtool-head fair validate --verbose --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project . --fair-properties "AppFairApp.xcconfig"
+          fairtool-head fair validate --verbose --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project . --fair-properties "appfair.xcconfig"
 
       # Verifies that pages are enabled for this repository
       - name: "Check Repository Page: https://${{ env.ORGNAME }}.github.io/App"
@@ -180,7 +180,7 @@ jobs:
 
       - name: "Generate Icon"
         run: |
-          fairtool-head fair icon --org "${{ env.ORGNAME }}" --fair-properties AppFairApp.xcconfig --accent-color Assets.xcassets/AccentColor.colorset/Contents.json --app-icon Assets.xcassets/AppIcon.appiconset/Contents.json
+          fairtool-head fair icon --org "${{ env.ORGNAME }}" --fair-properties appfair.xcconfig --accent-color Assets.xcassets/AccentColor.colorset/Contents.json --app-icon Assets.xcassets/AppIcon.appiconset/Contents.json
 
       - name: "Build iOS App"
         if: ${{ inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' }}
@@ -472,7 +472,7 @@ jobs:
             --org "${{ env.ORGNAME }}" \
             --ref "${{ env.COMMITHASH }}" \
             --integration-title "${{ env.PRTITLE }}" \
-            --fair-properties "AppFairApp.xcconfig" \
+            --fair-properties "appfair.xcconfig" \
             --fairseal-issuer "${{ inputs.fairseal_issuer }}" \
             --fairseal-key "${{ secrets.APP_FAIR_FAIRSEAL_KEY }}" \
             --allow-license "${{ inputs.license }}" \
@@ -492,14 +492,14 @@ jobs:
           # store the PR in the build archive
           cp -a ReleasePR "staging/"
 
-          fairtool-head fair merge --verbose --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project ReleasePR --fair-properties "AppFairApp.xcconfig" --output .
+          fairtool-head fair merge --verbose --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project ReleasePR --fair-properties "appfair.xcconfig" --output .
 
           file Assets.xcassets/AppIcon.appiconset/*.*
 
           # needed to be able to ad-hoc codesign embedded frameworks
           plutil -replace 'com\.apple\.security\.cs\.disable-library-validation' -bool true Sandbox.entitlements
         
-          fairtool-head fair validate --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project "${{ env.IR_TARGET }}" --fair-properties "AppFairApp.xcconfig"
+          fairtool-head fair validate --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project "${{ env.IR_TARGET }}" --fair-properties "appfair.xcconfig"
 
           xcrun swift package resolve
           cp -a .build/checkouts Dependencies
@@ -525,7 +525,7 @@ jobs:
       - name: "Generate Icon"
         run: |
           cd "${{ env.IR_TARGET }}"
-          fairtool-head fair icon --org "${{ env.ORGNAME }}" --fair-properties "AppFairApp.xcconfig" --accent-color Assets.xcassets/AccentColor.colorset/Contents.json --app-icon Assets.xcassets/AppIcon.appiconset/Contents.json
+          fairtool-head fair icon --org "${{ env.ORGNAME }}" --fair-properties "appfair.xcconfig" --accent-color Assets.xcassets/AccentColor.colorset/Contents.json --app-icon Assets.xcassets/AppIcon.appiconset/Contents.json
           cd -
 
 
@@ -537,7 +537,7 @@ jobs:
           TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
         run: |
           echo "::set-output name=defined::true"
-          # check the 'TESTFLIGHT_APP_ID' key in AppFairApp.xcconfig
+          # check the 'TESTFLIGHT_APP_ID' key in appfair.xcconfig
           echo "::set-output name=appid::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme AppFairApp archive 2>/dev/null | jq -r '.[].buildSettings.TESTFLIGHT_APP_ID')"
 
 
@@ -622,9 +622,9 @@ jobs:
           security find-identity -v
 
           # Update config with re-bundled identifier
-          cp AppFairApp.xcconfig AppFairApp.xcconfig.clean
-          echo "PRODUCT_BUNDLE_IDENTIFIER = org.appfair.${{ env.BUNDLE_ID }}" >> AppFairApp.xcconfig
-          echo "DEVELOPMENT_TEAM = ${{ env.TESTFLIGHT_TEAMID }}" >> AppFairApp.xcconfig
+          cp appfair.xcconfig appfair.xcconfig.clean
+          echo "PRODUCT_BUNDLE_IDENTIFIER = org.appfair.${{ env.BUNDLE_ID }}" >> appfair.xcconfig
+          echo "DEVELOPMENT_TEAM = ${{ env.TESTFLIGHT_TEAMID }}" >> appfair.xcconfig
 
 
 
@@ -645,8 +645,8 @@ jobs:
           SUPPORTED_PLATFORMS: macosx
           CI: true
         run: |
-          echo "SUPPORTED_PLATFORMS = macosx" >> AppFairApp.xcconfig
-          echo "PLATFORM_NAME = macosx" >> AppFairApp.xcconfig
+          echo "SUPPORTED_PLATFORMS = macosx" >> appfair.xcconfig
+          echo "PLATFORM_NAME = macosx" >> appfair.xcconfig
           fastlane beta
 
 
@@ -667,8 +667,8 @@ jobs:
           CI: true
         run: |
           # Fastlane bug: if the platforms include "osx", then iOS won't work
-          echo "SUPPORTED_PLATFORMS = iphoneos" >> AppFairApp.xcconfig
-          echo "PLATFORM_NAME = iphoneos" >> AppFairApp.xcconfig
+          echo "SUPPORTED_PLATFORMS = iphoneos" >> appfair.xcconfig
+          echo "PLATFORM_NAME = iphoneos" >> appfair.xcconfig
           fastlane beta
 
 
@@ -678,7 +678,7 @@ jobs:
         run: |
           # Cleanup and restore the previous config
           rm -rf fastlane/
-          mv AppFairApp.xcconfig.clean AppFairApp.xcconfig
+          mv appfair.xcconfig.clean appfair.xcconfig
 
 
 
@@ -796,7 +796,7 @@ jobs:
             --retry-duration 600 \
             --artifact-url "$IPAURL" \
             --artifact-staging "staging/" \
-            --fair-properties "${{ env.IR_TARGET }}/AppFairApp.xcconfig" \
+            --fair-properties "${{ env.IR_TARGET }}/appfair.xcconfig" \
             --accent-color "${{ env.IR_TARGET }}/Assets.xcassets/AccentColor.colorset/Contents.json" \
             --project .
 
@@ -843,7 +843,7 @@ jobs:
             --retry-duration 600 \
             --artifact-url "$ZIPURL" \
             --artifact-staging "staging/" \
-            --fair-properties "${{ env.IR_TARGET }}/AppFairApp.xcconfig" \
+            --fair-properties "${{ env.IR_TARGET }}/appfair.xcconfig" \
             --accent-color "${{ env.IR_TARGET }}/Assets.xcassets/AccentColor.colorset/Contents.json" \
             --project .
 
