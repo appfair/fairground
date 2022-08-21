@@ -645,6 +645,7 @@ jobs:
           CI: true
         run: |
           echo "SUPPORTED_PLATFORMS = macosx" >> AppFairApp.xcconfig
+          echo "PLATFORM_NAME = macosx" >> AppFairApp.xcconfig
           fastlane beta
 
 
@@ -666,6 +667,7 @@ jobs:
         run: |
           # Fastlane bug: if the platforms include "osx", then iOS won't work
           echo "SUPPORTED_PLATFORMS = iphoneos" >> AppFairApp.xcconfig
+          echo "PLATFORM_NAME = iphoneos" >> AppFairApp.xcconfig
           fastlane beta
 
 
