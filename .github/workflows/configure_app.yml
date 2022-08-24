@@ -101,7 +101,7 @@ jobs:
           sed -i "s;^PRODUCT_BUNDLE_IDENTIFIER[ ]*=.*;PRODUCT_BUNDLE_IDENTIFIER = ${{ env.BUNDLE_ID }};g" appfair.xcconfig
           sed -i "s;^MARKETING_VERSION[ ]*=.*;MARKETING_VERSION = ${{ inputs.version }};g" appfair.xcconfig
 
-          SUPPORTED_PLATFORMS=""
+          SUPPORTED_PLATFORMS="${{ inputs.build_macos }} ${{ inputs.build_ios }}"
           if [ "${{ inputs.build_macos }}" == "true"]; then
             SUPPORTED_PLATFORMS="${SUPPORTED_PLATFORMS} macosx"
           fi
