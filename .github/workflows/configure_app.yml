@@ -33,10 +33,10 @@ on:
         required: true
       build_ios:
         type: boolean
-        required: false
+        required: true
       build_macos:
         type: boolean
-        required: false
+        required: true
 
 jobs:
   configure:
