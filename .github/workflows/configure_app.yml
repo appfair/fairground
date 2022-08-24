@@ -101,15 +101,15 @@ jobs:
           sed -i "s;^PRODUCT_BUNDLE_IDENTIFIER[ ]*=.*;PRODUCT_BUNDLE_IDENTIFIER = ${{ env.BUNDLE_ID }};g" appfair.xcconfig
           sed -i "s;^MARKETING_VERSION[ ]*=.*;MARKETING_VERSION = ${{ inputs.version }};g" appfair.xcconfig
 
-          SUPPORTED_PLATFORMS="${{ inputs.build_macos }} ${{ inputs.build_ios }}"
-          if [ "${{ inputs.build_macos }}" == "true"]; then
+          SUPPORTED_PLATFORMS=""
+          if [ "${{ inputs.build_macos }}" -eq "true" ]; then
             SUPPORTED_PLATFORMS="${SUPPORTED_PLATFORMS} macosx"
           fi
-          if [ "${{ inputs.build_ios }}" == "true"]; then
+          if [ "${{ inputs.build_ios }}" -eq "true" ]; then
             SUPPORTED_PLATFORMS="${SUPPORTED_PLATFORMS} iphoneos iphonesimulator"
           fi
          
-          sed -i "s;^SUPPORTED_PLATFORMS[ ]*=.*;SUPPORTED_PLATFORMS = ${SUPPORTED_PLATFORMS};g" appfair.xcconfig
+          sed -i "s;^SUPPORTED_PLATFORMS[ ]*=.*;SUPPORTED_PLATFORMS =${SUPPORTED_PLATFORMS};g" appfair.xcconfig
 
           git config --global user.name 'fair-ground action'
           git config --global user.email 'fair-ground@users.noreply.github.com'
