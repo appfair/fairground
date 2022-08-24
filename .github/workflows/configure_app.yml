@@ -103,13 +103,13 @@ jobs:
 
           SUPPORTED_PLATFORMS=""
           if [ "${{ inputs.build_macos }}" == "true" ]; then
-            echo "Building macOS"
             SUPPORTED_PLATFORMS="${SUPPORTED_PLATFORMS} macosx"
           fi
           if [ "${{ inputs.build_ios }}" == "true" ]; then
-            echo "Building iOS"
             SUPPORTED_PLATFORMS="${SUPPORTED_PLATFORMS} iphoneos iphonesimulator"
           fi
+
+          echo "Building SUPPORTED_PLATFORMS: ${SUPPORTED_PLATFORMS}"
          
           sed -i "s;^SUPPORTED_PLATFORMS[ ]*=.*;SUPPORTED_PLATFORMS =${SUPPORTED_PLATFORMS};g" appfair.xcconfig
 
