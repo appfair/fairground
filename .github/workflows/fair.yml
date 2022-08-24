@@ -18,13 +18,15 @@
 
 # This workflow runs in both the trusted base repository at
 # https://www.github.com/FAIR-GROUND/App/actions as well as in
-# and forks that have enabled actions. The latter workflow
+# any forks that have enabled actions. The latter workflow
 # will build the app and create a release in the fork's repository,
 # while the workflow in the base repository will
 # build the app a second time in a trusted environment and,
 # if the two binaries match, publish a `fairseal` hash of
 # the release artifacts for verification by the App Fair catalog
-# browser app. See https://www.appfair.net for more details.
+# browser app, as well as optionally publish the app to external channels.
+#
+# See https://www.appfair.net for more details.
 name: "fair-ground"
 on:
   workflow_call:
