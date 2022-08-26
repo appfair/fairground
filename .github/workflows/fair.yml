@@ -477,7 +477,6 @@ jobs:
             --fair-properties "appfair.xcconfig" \
             --fairseal-issuer "${{ inputs.fairseal_issuer }}" \
             --fairseal-key "${{ secrets.APP_FAIR_FAIRSEAL_KEY }}" \
-            --allow-license "${{ inputs.license }}" \
             --allow-name "${{ secrets.APP_FAIR_ALLOW_NAME }}" \
             --deny-name "${{ secrets.APP_FAIR_DENY_NAME }}" \
             --allow-from "${{ secrets.APP_FAIR_ALLOW_FROM }}" \
