@@ -125,7 +125,7 @@ jobs:
     name: "Fork Apply"
     if: ${{ inputs.fairseal_issuer == '' && github.repository_owner != 'appfair' }}
     runs-on: macos-12
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - name: "Initialize fair-ground"
         env:
@@ -408,7 +408,7 @@ jobs:
     name: "Integrate Release"
     if: ${{ inputs.fairseal_issuer != '' }}
     runs-on: macos-12
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - name: "Initialize fair-ground"
         env:
