@@ -656,12 +656,6 @@ jobs:
           # show valid identities
           security find-identity -v
 
-          # Update config with re-bundled identifier
-          cp $FAIRGROUND.xcconfig $FAIRGROUND.xcconfig.clean
-          echo "PRODUCT_BUNDLE_IDENTIFIER = ${{ env.TESTFLIGHT_BUNDLE_PREFIX }}.${{ env.BUNDLE_ID }}" >> $FAIRGROUND.xcconfig
-          echo "DEVELOPMENT_TEAM = ${{ env.TESTFLIGHT_TEAMID }}" >> $FAIRGROUND.xcconfig
-
-
 
       - name: "PreFlight iOS"
         if: ${{ inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.preflight.outputs.appid > 0 }}
@@ -678,13 +672,17 @@ jobs:
           SUPPORTED_PLATFORMS: iphoneos
           CI: true
         run: |
+          # Update config with re-bundled identifier
+          cp $FAIRGROUND.xcconfig $FAIRGROUND.xcconfig.clean
+          echo "PRODUCT_BUNDLE_IDENTIFIER = ${{ env.TESTFLIGHT_BUNDLE_PREFIX }}.${{ env.BUNDLE_ID }}" >> $FAIRGROUND.xcconfig
+          echo "DEVELOPMENT_TEAM = ${{ env.TESTFLIGHT_TEAMID }}" >> $FAIRGROUND.xcconfig
+
           # Fastlane bug: if the platforms include "osx", then iOS won't work
           echo "SUPPORTED_PLATFORMS = iphoneos" >> $FAIRGROUND.xcconfig
           echo "PLATFORM_NAME = iphoneos" >> $FAIRGROUND.xcconfig
           fastlane beta
           #fastlane pilot upload
-
-
+          mv $FAIRGROUND.xcconfig.clean $FAIRGROUND.xcconfig
 
       - name: "Build macOS App"
         if: ${{ inputs.target_macos == true && steps.platforms.outputs.macos == 'enabled' }}
@@ -780,13 +778,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
         run: |
           gh workflow --repo "${{ inputs.fairground }}/${{ inputs.fairground }}.github.io" run "catalog.yml"
-
-      - name: "PreFlight Cleanup"
-        if: ${{ env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.preflight.outputs.appid > 0 }}
-        run: |
-          # Cleanup and restore the previous config
-          rm -rf fastlane/
-          mv $FAIRGROUND.xcconfig.clean $FAIRGROUND.xcconfig
 
       - name: Stage Release Metadata
         # copy over the un-processed assets from the ReleasePR/
