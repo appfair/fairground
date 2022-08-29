@@ -774,10 +774,6 @@ jobs:
             setup_ci if ENV['CI']
             configure
             build
-            upload_to_testflight({
-              skip_submission: false,
-              skip_waiting_for_build_processing: false,
-            })
           end
           EOF
 
@@ -828,8 +824,7 @@ jobs:
           echo "SUPPORTED_PLATFORMS = macosx" >> appfair.xcconfig
           echo "PLATFORM_NAME = macosx" >> appfair.xcconfig
           fastlane beta
-
-
+          fastlane pilot upload
 
       - name: "PreFlight iOS"
         if: ${{ inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.preflight.outputs.appid > 0 }}
@@ -850,8 +845,7 @@ jobs:
           echo "SUPPORTED_PLATFORMS = iphoneos" >> appfair.xcconfig
           echo "PLATFORM_NAME = iphoneos" >> appfair.xcconfig
           fastlane beta
-
-
+          fastlane pilot upload
 
       - name: "PreFlight Cleanup"
         if: ${{ env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.preflight.outputs.appid > 0 }}
