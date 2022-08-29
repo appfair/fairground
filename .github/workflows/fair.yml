@@ -411,12 +411,6 @@ jobs:
         run: |
           echo "$GITHUB_CONTEXT"
 
-          # The target folder for I-R; setting to the current folder
-          # uses the sanitized project.xcodeproj, and setting it to
-          # ReleasePR/ uses the raw PR build settings
-          echo "IR_TARGET=." >> $GITHUB_ENV
-          #echo "IR_TARGET=ReleasePR" >> $GITHUB_ENV
-
           echo "PRTITLE=${{ github.event.pull_request.title }}" >> $GITHUB_ENV
           echo "ORGNAME=${{ github.event.pull_request.head.user.login }}" >> $GITHUB_ENV
           echo "COMMITHASH=${{ github.event.pull_request.head.sha }}" >> $GITHUB_ENV
@@ -495,18 +489,16 @@ jobs:
           # needed to be able to ad-hoc codesign embedded frameworks
           plutil -replace 'com\.apple\.security\.cs\.disable-library-validation' -bool true Sandbox.entitlements
         
-          $FAIRTOOL fair validate --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project "${{ env.IR_TARGET }}" --fair-properties "appfair.xcconfig"
+          $FAIRTOOL fair validate --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project . --fair-properties "appfair.xcconfig"
 
           xcrun swift package resolve
           cp -a .build/checkouts Dependencies
           tar cvzf "staging/${{ env.FAIR_APP_ARTIFACT }}-source.tgz" --exclude='.git/' --exclude='.build/' --exclude='staging/' .
           rm -rf Dependencies
 
-          cd "${{ env.IR_TARGET }}"
           xcrun swift package resolve
           cat Package.resolved # useful for the log
           cp Package.resolved Sources/App/Resources/ # embed in the app
-          cd -
 
       # Verifies that pages are enabled for the forked repository
       - name: "Check Repository Page: https://${{ env.ORGNAME }}.github.io/App"
@@ -515,15 +507,12 @@ jobs:
       - name: "Configure Deployment Platforms"
         id: platforms
         run: |
-          echo "::set-output name=macos::$(xcodebuild -workspace ${{ env.IR_TARGET }}/App.xcworkspace -showBuildSettings -quiet -json -scheme AppFairApp archive 2>/dev/null | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'macosx' > /dev/null && echo enabled || echo disabled)"
-          echo "::set-output name=ios::$(xcodebuild -workspace ${{ env.IR_TARGET }}/App.xcworkspace -showBuildSettings -quiet -json -scheme AppFairApp archive 2>/dev/null | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'iphoneos' > /dev/null && echo enabled || echo disabled)"
+          echo "::set-output name=macos::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme AppFairApp archive 2>/dev/null | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'macosx' > /dev/null && echo enabled || echo disabled)"
+          echo "::set-output name=ios::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme AppFairApp archive 2>/dev/null | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'iphoneos' > /dev/null && echo enabled || echo disabled)"
 
       - name: "Generate Icon"
         run: |
-          cd "${{ env.IR_TARGET }}"
           $FAIRTOOL fair icon --org "${{ env.ORGNAME }}" --fair-properties "appfair.xcconfig" --accent-color Assets.xcassets/AccentColor.colorset/Contents.json --app-icon Assets.xcassets/AppIcon.appiconset/Contents.json
-          cd -
-
 
       - name: "Check PreFlight Eligibility"
         id: preflight
@@ -624,7 +613,7 @@ jobs:
         if: ${{ inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' }}
         run: |
           xcodebuild archive \
-            -workspace "${{ env.IR_TARGET }}/App.xcworkspace" \
+            -workspace "App.xcworkspace" \
             -configuration Release \
             -scheme "AppFairApp" \
             -sdk "iphoneos" \
@@ -637,17 +626,6 @@ jobs:
 
           cp -a "staging/.${{ env.FAIR_APP_ARTIFACT }}-iOS.xcarchive/Products/Applications" "staging/Payload"
           ditto -c -k --sequesterRsrc --keepParent "staging/Payload" "staging/${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa"
-
-      - name: Stage Release Metadata
-        # copy over the un-processed assets from the ReleasePR/
-        run: |
-          cp "${{ env.IR_TARGET }}"/Assets.xcassets/AppIcon.appiconset/appicon-iphone-60x60@3x.png staging/"${{ env.FAIR_APP_ARTIFACT }}.png"
-          cp "${{ env.IR_TARGET }}"/LICENSE.txt "${{ env.IR_TARGET }}"/Package.resolved "${{ env.IR_TARGET }}"/README.md "${{ env.IR_TARGET }}"/Info.plist "${{ env.IR_TARGET }}"/Sandbox.entitlements staging/
-          cp "${{ env.IR_TARGET }}"/docs/screenshots/screenshot*-[0-9]*x[0-9]*.png staging/ || true
-          cp "${{ env.IR_TARGET }}"/docs/screenshots/screenshot*-[0-9]*x[0-9]*.jpg staging/ || true
-          ls -la staging/
-          # log the checksum for each of the staging elements
-          shasum -a 256 staging/*.*
 
       - name: "Generate iOS fairseal"
         if: ${{ inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' }}
@@ -675,8 +653,8 @@ jobs:
             --retry-duration 600 \
             --artifact-url "$IPAURL" \
             --artifact-staging "staging/" \
-            --fair-properties "${{ env.IR_TARGET }}/appfair.xcconfig" \
-            --accent-color "${{ env.IR_TARGET }}/Assets.xcassets/AccentColor.colorset/Contents.json" \
+            --fair-properties "appfair.xcconfig" \
+            --accent-color "Assets.xcassets/AccentColor.colorset/Contents.json" \
             --project .
 
           mv -f staging/.artifact_stash/* staging/ || true # restore stash
@@ -709,7 +687,7 @@ jobs:
         if: ${{ inputs.target_macos == true && steps.platforms.outputs.macos == 'enabled' }}
         run: |
           xcodebuild archive \
-            -workspace "${{ env.IR_TARGET }}/App.xcworkspace" \
+            -workspace "App.xcworkspace" \
             -configuration Release \
             -scheme "AppFairApp" \
             -sdk "macosx" \
@@ -780,8 +758,8 @@ jobs:
             --retry-duration 600 \
             --artifact-url "$ZIPURL" \
             --artifact-staging "staging/" \
-            --fair-properties "${{ env.IR_TARGET }}/appfair.xcconfig" \
-            --accent-color "${{ env.IR_TARGET }}/Assets.xcassets/AccentColor.colorset/Contents.json" \
+            --fair-properties "appfair.xcconfig" \
+            --accent-color "Assets.xcassets/AccentColor.colorset/Contents.json" \
             --project .
 
           mv -f staging/.artifact_stash/* staging/ || true # restore stash
@@ -806,6 +784,18 @@ jobs:
           # Cleanup and restore the previous config
           rm -rf fastlane/
           mv appfair.xcconfig.clean appfair.xcconfig
+
+      - name: Stage Release Metadata
+        # copy over the un-processed assets from the ReleasePR/
+        if: always()
+        run: |
+          cp Assets.xcassets/AppIcon.appiconset/appicon-iphone-60x60@3x.png staging/"${{ env.FAIR_APP_ARTIFACT }}.png"
+          cp LICENSE.txt Package.resolved README.md Info.plist Sandbox.entitlements staging/
+          cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.png staging/ || true
+          cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.jpg staging/ || true
+          ls -la staging/
+          # log the checksum for each of the staging elements
+          shasum -a 256 staging/*.*
 
       - name: "Upload Reproducible Build"
         # upload the trusted artifacts for each build for reproducible-builds
