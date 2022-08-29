@@ -32,7 +32,8 @@ name: "fair-ground"
 env:
   #FAIRTOOL: fairtool
   FAIRTOOL: fairtool-head
-  TESTFLIGHT_BUNDLE_PREFIX: 'org.appfair'
+  FAIRGROUND: appfair
+  TESTFLIGHT_BUNDLE_PREFIX: org.appfair
 
 on:
   workflow_call:
@@ -41,7 +42,7 @@ on:
       fairground:
         required: false
         type: string
-        default: appfair
+        default: ${{ env.FAIRGROUND }}
       # the name of the bot that posts fairseals to PRs that pass integration
       fairseal_issuer:
         required: false
@@ -129,7 +130,7 @@ jobs:
   # and a fairseal is published.
   fork_apply:
     name: "Fork Apply"
-    if: ${{ inputs.fairseal_issuer == '' && github.repository_owner != 'appfair' }}
+    if: ${{ inputs.fairseal_issuer == '' && github.repository_owner != env.FAIRGROUND }}
     runs-on: macos-12
     timeout-minutes: 60
     steps:
@@ -139,7 +140,7 @@ jobs:
         run: |
           echo "$GITHUB_CONTEXT"
           echo "ORGNAME=${{ github.repository_owner }}" >> $GITHUB_ENV
-          echo "APPNAME=$(echo ${{ github.repository_owner }} | sed 's;^appfair$;App-Name;g')" >> $GITHUB_ENV
+          echo "APPNAME=$(echo ${{ github.repository_owner }} | sed 's;^${{ env.FAIRGROUND }}$;App-Name;g')" >> $GITHUB_ENV
           echo "COMMITHASH=${{ github.sha }}" >> $GITHUB_ENV
 
       - name: "Configure Fork: ${{ env.APPNAME }}"
@@ -180,7 +181,7 @@ jobs:
         run: |
           # needed to be able to ad-hoc codesign embedded frameworks
           plutil -replace 'com\.apple\.security\.cs\.disable-library-validation' -bool true Sandbox.entitlements
-          $FAIRTOOL fair validate --verbose --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project . --fair-properties "appfair.xcconfig"
+          $FAIRTOOL fair validate --verbose --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project . --fair-properties "$FAIRGROUND.xcconfig"
 
       # Verifies that pages are enabled for this repository
       - name: "Check Repository Page: https://${{ env.ORGNAME }}.github.io/App"
@@ -188,7 +189,7 @@ jobs:
 
       - name: "Generate Icon"
         run: |
-          $FAIRTOOL fair icon --org "${{ env.ORGNAME }}" --fair-properties appfair.xcconfig --accent-color Assets.xcassets/AccentColor.colorset/Contents.json --app-icon Assets.xcassets/AppIcon.appiconset/Contents.json
+          $FAIRTOOL fair icon --org "${{ env.ORGNAME }}" --fair-properties $FAIRGROUND.xcconfig --accent-color Assets.xcassets/AccentColor.colorset/Contents.json --app-icon Assets.xcassets/AppIcon.appiconset/Contents.json
 
       # Create a new release for this tag
       - name: "Create Release"
@@ -463,7 +464,7 @@ jobs:
             --org "${{ env.ORGNAME }}" \
             --ref "${{ env.COMMITHASH }}" \
             --integration-title "${{ env.PRTITLE }}" \
-            --fair-properties "appfair.xcconfig" \
+            --fair-properties "$FAIRGROUND.xcconfig" \
             --fairseal-issuer "${{ inputs.fairseal_issuer }}" \
             --fairseal-key "${{ secrets.APP_FAIR_FAIRSEAL_KEY }}" \
             --allow-name "${{ secrets.APP_FAIR_ALLOW_NAME }}" \
@@ -482,14 +483,14 @@ jobs:
           # store the PR in the build archive
           cp -a ReleasePR "staging/"
 
-          $FAIRTOOL fair merge --verbose --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project ReleasePR --fair-properties "appfair.xcconfig" --output .
+          $FAIRTOOL fair merge --verbose --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project ReleasePR --fair-properties "$FAIRGROUND.xcconfig" --output .
 
           file Assets.xcassets/AppIcon.appiconset/*.*
 
           # needed to be able to ad-hoc codesign embedded frameworks
           plutil -replace 'com\.apple\.security\.cs\.disable-library-validation' -bool true Sandbox.entitlements
         
-          $FAIRTOOL fair validate --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project . --fair-properties "appfair.xcconfig"
+          $FAIRTOOL fair validate --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project . --fair-properties "$FAIRGROUND.xcconfig"
 
           xcrun swift package resolve
           cp -a .build/checkouts Dependencies
@@ -512,7 +513,58 @@ jobs:
 
       - name: "Generate Icon"
         run: |
-          $FAIRTOOL fair icon --org "${{ env.ORGNAME }}" --fair-properties "appfair.xcconfig" --accent-color Assets.xcassets/AccentColor.colorset/Contents.json --app-icon Assets.xcassets/AppIcon.appiconset/Contents.json
+          $FAIRTOOL fair icon --org "${{ env.ORGNAME }}" --fair-properties "$FAIRGROUND.xcconfig" --accent-color Assets.xcassets/AccentColor.colorset/Contents.json --app-icon Assets.xcassets/AppIcon.appiconset/Contents.json
+
+      - name: "Build iOS App"
+        if: ${{ inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' }}
+        run: |
+          xcodebuild archive \
+            -workspace "App.xcworkspace" \
+            -configuration Release \
+            -scheme "AppFairApp" \
+            -sdk "iphoneos" \
+            -archivePath "staging/.${{ env.FAIR_APP_ARTIFACT }}-iOS.xcarchive" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES \
+            CODE_SIGN_IDENTITY="-" \
+            FAIRAPP_PRODUCT_NAME="${{ env.PRODUCT_NAME }}"
+
+          cp -a "staging/.${{ env.FAIR_APP_ARTIFACT }}-iOS.xcarchive/Products/Applications" "staging/Payload"
+          ditto -c -k --sequesterRsrc --keepParent "staging/Payload" "staging/${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa"
+
+      - name: "Generate iOS fairseal"
+        if: ${{ inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
+        run: |
+          # build the URL for the GitHub download artifact
+          IPAURL="https://github.com/${{ env.ORGNAME }}/App/releases/download/${{ steps.get_semver_tag.outputs.semver_tag }}/${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa" 
+
+          echo "Generating fairseal for: $IPAURL"
+
+          mkdir -p staging/.artifact_stash/
+          mv -f staging/*.zip staging/.artifact_stash/ || true # don't seal the macOS zip for iOS seal
+
+          $FAIRTOOL fair fairseal \
+            --verbose \
+            --hub "github.com/${{ inputs.fairground }}" \
+            --base-repo "App" \
+            --token "${{ secrets.APP_FAIR_BOT_TOKEN }}" \
+            --org "${{ env.ORGNAME }}" \
+            --fairseal-key "${{ secrets.APP_FAIR_FAIRSEAL_KEY }}" \
+            --trusted-artifact "staging/${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa" \
+            --disassembler=/usr/bin/otool \
+            --permitted-diffs 0 \
+            --retry-duration 600 \
+            --artifact-url "$IPAURL" \
+            --artifact-staging "staging/" \
+            --fair-properties "$FAIRGROUND.xcconfig" \
+            --accent-color "Assets.xcassets/AccentColor.colorset/Contents.json" \
+            --project .
+
+          mv -f staging/.artifact_stash/* staging/ || true # restore stash
+
 
       - name: "Check PreFlight Eligibility"
         id: preflight
@@ -605,59 +657,10 @@ jobs:
           security find-identity -v
 
           # Update config with re-bundled identifier
-          cp appfair.xcconfig appfair.xcconfig.clean
-          echo "PRODUCT_BUNDLE_IDENTIFIER = org.appfair.${{ env.BUNDLE_ID }}" >> appfair.xcconfig
-          echo "DEVELOPMENT_TEAM = ${{ env.TESTFLIGHT_TEAMID }}" >> appfair.xcconfig
+          cp $FAIRGROUND.xcconfig $FAIRGROUND.xcconfig.clean
+          echo "PRODUCT_BUNDLE_IDENTIFIER = ${{ env.TESTFLIGHT_BUNDLE_PREFIX }}.${{ env.BUNDLE_ID }}" >> $FAIRGROUND.xcconfig
+          echo "DEVELOPMENT_TEAM = ${{ env.TESTFLIGHT_TEAMID }}" >> $FAIRGROUND.xcconfig
 
-      - name: "Build iOS App"
-        if: ${{ inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' }}
-        run: |
-          xcodebuild archive \
-            -workspace "App.xcworkspace" \
-            -configuration Release \
-            -scheme "AppFairApp" \
-            -sdk "iphoneos" \
-            -archivePath "staging/.${{ env.FAIR_APP_ARTIFACT }}-iOS.xcarchive" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            AD_HOC_CODE_SIGNING_ALLOWED=YES \
-            CODE_SIGN_IDENTITY="-" \
-            FAIRAPP_PRODUCT_NAME="${{ env.PRODUCT_NAME }}"
-
-          cp -a "staging/.${{ env.FAIR_APP_ARTIFACT }}-iOS.xcarchive/Products/Applications" "staging/Payload"
-          ditto -c -k --sequesterRsrc --keepParent "staging/Payload" "staging/${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa"
-
-      - name: "Generate iOS fairseal"
-        if: ${{ inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
-        run: |
-          # build the URL for the GitHub download artifact
-          IPAURL="https://github.com/${{ env.ORGNAME }}/App/releases/download/${{ steps.get_semver_tag.outputs.semver_tag }}/${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa" 
-
-          echo "Generating fairseal for: $IPAURL"
-
-          mkdir -p staging/.artifact_stash/
-          mv -f staging/*.zip staging/.artifact_stash/ || true # don't seal the macOS zip for iOS seal
-
-          $FAIRTOOL fair fairseal \
-            --verbose \
-            --hub "github.com/${{ inputs.fairground }}" \
-            --base-repo "App" \
-            --token "${{ secrets.APP_FAIR_BOT_TOKEN }}" \
-            --org "${{ env.ORGNAME }}" \
-            --fairseal-key "${{ secrets.APP_FAIR_FAIRSEAL_KEY }}" \
-            --trusted-artifact "staging/${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa" \
-            --disassembler=/usr/bin/otool \
-            --permitted-diffs 0 \
-            --retry-duration 600 \
-            --artifact-url "$IPAURL" \
-            --artifact-staging "staging/" \
-            --fair-properties "appfair.xcconfig" \
-            --accent-color "Assets.xcassets/AccentColor.colorset/Contents.json" \
-            --project .
-
-          mv -f staging/.artifact_stash/* staging/ || true # restore stash
 
 
       - name: "PreFlight iOS"
@@ -676,8 +679,8 @@ jobs:
           CI: true
         run: |
           # Fastlane bug: if the platforms include "osx", then iOS won't work
-          echo "SUPPORTED_PLATFORMS = iphoneos" >> appfair.xcconfig
-          echo "PLATFORM_NAME = iphoneos" >> appfair.xcconfig
+          echo "SUPPORTED_PLATFORMS = iphoneos" >> $FAIRGROUND.xcconfig
+          echo "PLATFORM_NAME = iphoneos" >> $FAIRGROUND.xcconfig
           fastlane beta
           #fastlane pilot upload
 
@@ -758,7 +761,7 @@ jobs:
             --retry-duration 600 \
             --artifact-url "$ZIPURL" \
             --artifact-staging "staging/" \
-            --fair-properties "appfair.xcconfig" \
+            --fair-properties "$FAIRGROUND.xcconfig" \
             --accent-color "Assets.xcassets/AccentColor.colorset/Contents.json" \
             --project .
 
@@ -783,7 +786,7 @@ jobs:
         run: |
           # Cleanup and restore the previous config
           rm -rf fastlane/
-          mv appfair.xcconfig.clean appfair.xcconfig
+          mv $FAIRGROUND.xcconfig.clean $FAIRGROUND.xcconfig
 
       - name: Stage Release Metadata
         # copy over the un-processed assets from the ReleasePR/
