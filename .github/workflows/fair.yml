@@ -165,12 +165,12 @@ jobs:
           swift package resolve
           cp Package.resolved Sources/App/Resources/
 
-      - name: Install ${{ env.FAIRTOOL }}
+      - name: "Install ${{ env.FAIRTOOL }}"
         run: |
           brew install fair-ground/tool/$FAIRTOOL
           $FAIRTOOL version
 
-      - name: Check Version
+      - name: "Check Version"
         id: get_semver_tag
         run: echo ::set-output name=semver_tag::$(xcodebuild -quiet -workspace ReleasePR/App.xcworkspace -showBuildSettings -json -scheme AppFairApp archive 2> /dev/null | jq -r '.[].buildSettings.MARKETING_VERSION')
 
@@ -216,14 +216,14 @@ jobs:
             FAIRAPP_PRODUCT_NAME="${{ env.PRODUCT_NAME }}"
 
           cp -a "staging/.${{ env.FAIR_APP_ARTIFACT }}-iOS.xcarchive/Products/Applications" "staging/Payload"
-          ditto -c -k --sequesterRsrc --keepParent "staging/Payload" "staging/${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa"
+          ditto -c -k --sequesterRsrc --keepParent "staging/Payload" "${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa"
 
       - name: "Upload iOS Release"
         if:  ${{ inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload "${GITHUB_REF#refs/tags/}" -- staging/*.ipa
+          gh release upload "${GITHUB_REF#refs/tags/}" -- "${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa"
 
       - name: "Build macOS App"
         if: ${{ inputs.target_macos == true && steps.platforms.outputs.macos == 'enabled' }}
@@ -258,7 +258,7 @@ jobs:
           codesign -d --entitlements - "staging/${{ env.PRODUCT_NAME }}.app"
 
           # create the zip file
-          ditto -c -k --sequesterRsrc --keepParent "staging/${{ env.PRODUCT_NAME }}.app" "staging/${{ env.FAIR_APP_ARTIFACT }}-macOS.zip"
+          ditto -c -k --sequesterRsrc --keepParent "staging/${{ env.PRODUCT_NAME }}.app" "${{ env.FAIR_APP_ARTIFACT }}-macOS.zip"
 
       # Notarization is not required for the App Fair, but a developer
       # can opt to notarize their own build which will allow them to 
@@ -319,7 +319,7 @@ jobs:
       # into a "NOTARY_CERTKEY_P12_BASE64" key.
       #
       # Reference: https://localazy.com/blog/how-to-automatically-sign-macos-apps-using-github-actions
-      - name: "Check signing keys"
+      - name: "Check Notarization Keys"
         id: notarization_setup
         env:
             NOTARY_TEAMID: ${{ secrets.NOTARY_TEAMID }}
@@ -350,19 +350,28 @@ jobs:
           codesign --force --deep -v --options runtime --entitlements "Sandbox.entitlements" -s "`security find-identity -v | cut -f 4 -d ' ' | head -n 1`" "staging/${{ env.PRODUCT_NAME }}.app"
 
           # re-create the archive with the signed app for submission
-          ditto -c -k --sequesterRsrc --keepParent "staging/${{ env.PRODUCT_NAME }}.app" "staging/${{ env.FAIR_APP_ARTIFACT }}-macOS.zip"
+          ditto -c -k --sequesterRsrc --keepParent "staging/${{ env.PRODUCT_NAME }}.app" "${{ env.FAIR_APP_ARTIFACT }}-macOS.zip"
 
           # perform notarization and wait for success
-          xcrun notarytool submit --wait --progress --apple-id "${{ secrets.NOTARY_USERID }}" --password "${{ secrets.NOTARY_PASSWORD }}" --team-id "${{ secrets.NOTARY_TEAMID }}" "staging/${{ env.FAIR_APP_ARTIFACT }}-macOS.zip"
+          xcrun notarytool submit --wait --progress --apple-id "${{ secrets.NOTARY_USERID }}" --password "${{ secrets.NOTARY_PASSWORD }}" --team-id "${{ secrets.NOTARY_TEAMID }}" "${{ env.FAIR_APP_ARTIFACT }}-macOS.zip"
 
           # staple the notarization ticket to the app
           xcrun stapler staple "staging/${{ env.PRODUCT_NAME }}.app"
 
           # re-create the archive with the signed & stapled artifact
-          ditto -c -k --sequesterRsrc --keepParent "staging/${{ env.PRODUCT_NAME }}.app" "staging/${{ env.FAIR_APP_ARTIFACT }}-macOS.zip"
+          ditto -c -k --sequesterRsrc --keepParent "staging/${{ env.PRODUCT_NAME }}.app" "${{ env.FAIR_APP_ARTIFACT }}-macOS.zip"
 
-      - name: "Stage Release Metadata"
+      - name: "Upload macOS Release"
+        if:  ${{ inputs.target_macos == true && steps.platforms.outputs.macos == 'enabled' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${GITHUB_REF#refs/tags/}" -- "${{ env.FAIR_APP_ARTIFACT }}-macOS.zip"
+
+      - name: "Upload Release Assets"
         if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         # Extract the Info.plist from the archives themselves, since they contain
         # the same post-processed metadata that the app will use.
         # Convert plists to XML for easier parsing.
@@ -378,27 +387,10 @@ jobs:
 
           # log the checksum for each of the staging elements
           openssl sha256 staging/*.*
-
-      - name: "Upload macOS Release"
-        if:  ${{ inputs.target_macos == true && steps.platforms.outputs.macos == 'enabled' }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release upload "${GITHUB_REF#refs/tags/}" -- staging/*.zip
-
-      # create and upload the release artifacts, which will be
-      # vaidates in the base fair-ground by integrate_release
-      - name: "Upload Release Assets"
-        if: startsWith(github.ref, 'refs/tags/')
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
           echo "Uploading release assets: ${GITHUB_REF#refs/tags/}"
 
           # upload staging assets to the existing GitHub release
           gh release upload "${GITHUB_REF#refs/tags/}" -- staging/*.*
-
-
 
 
 
@@ -437,10 +429,10 @@ jobs:
           echo "BUNDLE_ID=app.$(echo ${{ env.ORGNAME }})" >> $GITHUB_ENV
           echo "BUILDING PRODUCT: ${{ env.PRODUCT_NAME }}"
 
-      - name: Checkout Base Fairground
+      - name: "Checkout Base Fairground"
         uses: actions/checkout@v2
 
-      - name: Checkout Integration Pull Request
+      - name: "Checkout Integration Pull Request"
         uses: actions/checkout@v2
         with:
           path: ReleasePR
@@ -448,18 +440,18 @@ jobs:
           fetch-depth: 0
           submodules: false
 
-      - name: Verify workflow integrity
-        # the workflows must be identical; fetch & merge upstream if this fails
-        run: |
-          # workflows may not be modified
-          #diff -r .github/workflows/ ReleasePR/.github/workflows/
+      #- name: Verify workflow integrity
+      # the workflows must be identical; fetch & merge upstream if this fails
+      #run: |
+      # workflows may not be modified
+      #diff -r .github/workflows/ ReleasePR/.github/workflows/
 
-      - name: Install fairtool
+      - name: "Install ${{ env.FAIRTOOL }}"
         run: |
           brew install fair-ground/tool/$FAIRTOOL
           $FAIRTOOL version
 
-      - name: Check Version
+      - name: "Check Version"
         id: get_semver_tag
         run: echo ::set-output name=semver_tag::$(xcodebuild -quiet -workspace ReleasePR/App.xcworkspace -showBuildSettings -json -scheme AppFairApp archive 2> /dev/null | jq -r '.[].buildSettings.MARKETING_VERSION')
 
@@ -486,7 +478,7 @@ jobs:
             --deny-from "${{ secrets.APP_FAIR_DENY_FROM }}" \
             --verbose
 
-      - name: Integrate PR
+      - name: "Integrate PR"
         env:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
         run: |
