@@ -42,7 +42,7 @@ on:
       fairground:
         required: false
         type: string
-        default: ${{ env.FAIRGROUND }}
+        default: appfair
       # the name of the bot that posts fairseals to PRs that pass integration
       fairseal_issuer:
         required: false
