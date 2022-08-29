@@ -130,7 +130,7 @@ jobs:
   # and a fairseal is published.
   fork_apply:
     name: "Fork Apply"
-    if: ${{ inputs.fairseal_issuer == '' && github.repository_owner != ${{ env.FAIRGROUND }} }}
+    if: ${{ inputs.fairseal_issuer == '' && github.repository_owner != '${{ env.FAIRGROUND }}' }}
     runs-on: macos-12
     timeout-minutes: 60
     steps:
