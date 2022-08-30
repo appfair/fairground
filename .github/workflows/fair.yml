@@ -626,14 +626,14 @@ jobs:
 
             build
 
-            deliver({
-              submit_for_review: false,
-              automatic_release: false,
-              force: true,
-              skip_metadata: false,
-              skip_screenshots: false,
-              skip_binary_upload: true,
-            })
+            #deliver({
+            #force: false,
+            #skip_metadata: false,
+            #skip_screenshots: false,
+            #skip_binary_upload: true,
+            #submit_for_review: false,
+            #automatic_release: false,
+            #})
 
             upload_to_testflight({
               skip_submission: false,
