@@ -30,10 +30,11 @@
 name: "fair-ground"
 
 env:
-  #FAIRTOOL: fairtool
-  FAIRTOOL: fairtool-head
-  FAIRGROUND: appfair
-  TESTFLIGHT_BUNDLE_PREFIX: org.appfair
+  #FAIRTOOL: "fairtool"
+  FAIRTOOL: "fairtool-head"
+  FAIRGROUND: "appfair"
+  FAIRGROUND_LAUNCHPAD: "https://appfair.app/fair?app="
+  PREFLIGHT_BUNDLE_PREFIX: "org.appfair"
 
 on:
   workflow_call:
@@ -185,7 +186,7 @@ jobs:
 
       # Verifies that pages are enabled for this repository
       - name: "Check Repository Page: https://${{ env.ORGNAME }}.github.io/App"
-        run: curl --location --fail -s "${{ env.ORGNAME }}.github.io/App" | grep "https://appfair.app/fair?app=${{ env.ORGNAME }}"
+        run: curl --location --fail -s "${{ env.ORGNAME }}.github.io/App" | grep "$FAIRGROUND_LAUNCHPAD""${{ env.ORGNAME }}"
 
       - name: "Generate Icon"
         run: |
@@ -503,7 +504,7 @@ jobs:
 
       # Verifies that pages are enabled for the forked repository
       - name: "Check Repository Page: https://${{ env.ORGNAME }}.github.io/App"
-        run: curl --location --fail -s "${{ env.ORGNAME }}.github.io/App" | grep "https://appfair.app/fair?app=${{ env.ORGNAME }}"
+        run: curl --location --fail -s "${{ env.ORGNAME }}.github.io/App" | grep "$FAIRGROUND_LAUNCHPAD""${{ env.ORGNAME }}"
 
       - name: "Configure Deployment Platforms"
         id: platforms
@@ -573,7 +574,7 @@ jobs:
           TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
         run: |
           echo "::set-output name=defined::true"
-          # check the 'TESTFLIGHT_APP_ID' key in appfair.xcconfig
+          # check the 'TESTFLIGHT_APP_ID' key in $FAIRGROUND.xcconfig
           echo "::set-output name=appid::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme AppFairApp archive 2>/dev/null | jq -r '.[].buildSettings.TESTFLIGHT_APP_ID')"
 
 
@@ -599,7 +600,7 @@ jobs:
             })
             get_provisioning_profile({
               platform: ENV['FASTLANE_PROFILE_PLATFORM'],
-              app_identifier: "${{ env.TESTFLIGHT_BUNDLE_PREFIX}}.${{ env.BUNDLE_ID }}",
+              app_identifier: "${{ env.PREFLIGHT_BUNDLE_PREFIX}}.${{ env.BUNDLE_ID }}",
               force: true,
               fail_on_name_taken: false,
             })
@@ -656,9 +657,6 @@ jobs:
           # show valid identities
           security find-identity -v
 
-          # Export the metadata from the App.yml into fastlane's folder
-          # $FAIRTOOL deliver metadata -o fastlane/metadata/ App.yml
-
       - name: "PreFlight iOS"
         if: inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.preflight.outputs.appid > 0
         env:
@@ -676,14 +674,21 @@ jobs:
         run: |
           # Update config with re-bundled identifier
           cp $FAIRGROUND.xcconfig $FAIRGROUND.xcconfig.clean
-          echo "PRODUCT_BUNDLE_IDENTIFIER = ${{ env.TESTFLIGHT_BUNDLE_PREFIX }}.${{ env.BUNDLE_ID }}" >> $FAIRGROUND.xcconfig
+          echo "PRODUCT_BUNDLE_IDENTIFIER = ${{ env.PREFLIGHT_BUNDLE_PREFIX }}.${{ env.BUNDLE_ID }}" >> $FAIRGROUND.xcconfig
           echo "DEVELOPMENT_TEAM = ${{ env.TESTFLIGHT_TEAMID }}" >> $FAIRGROUND.xcconfig
 
           # Fastlane bug: if the platforms include "osx", then iOS won't work
           echo "SUPPORTED_PLATFORMS = iphoneos" >> $FAIRGROUND.xcconfig
           echo "PLATFORM_NAME = iphoneos" >> $FAIRGROUND.xcconfig
+
+          # Export the metadata from the App.yml into fastlane's metadata folder
+          #$FAIRTOOL fair metadata -o fastlane/metadata/ App.yml
+          $FAIRTOOL fair metadata App.yml
+
           fastlane beta
+          # TODO: separate build and uploads phases
           #fastlane pilot upload
+
           mv $FAIRGROUND.xcconfig.clean $FAIRGROUND.xcconfig
 
       - name: "Build macOS App"
