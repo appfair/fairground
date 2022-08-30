@@ -660,11 +660,23 @@ jobs:
         
           lane :beta do
             setup_ci if ENV['CI']
+
             configure
+
             build
+
+            deliver({
+              submit_for_review: false,
+              automatic_release: false,
+              force: true,
+              skip_metadata: false,
+              skip_screenshots: false,
+              skip_binary_upload: true,
+            })
+
             upload_to_testflight({
               skip_submission: false,
-              skip_waiting_for_build_processing: true,
+              skip_waiting_for_build_processing: false,
             })
           end
           EOF
