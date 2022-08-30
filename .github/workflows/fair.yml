@@ -34,6 +34,7 @@ env:
   FAIRTOOL: "fairtool-head"
   FAIRGROUND: "appfair"
   FAIRGROUND_LAUNCHPAD: "https://appfair.app/fair?app="
+  APP_TARGET: "AppFairApp"
   PREFLIGHT_BUNDLE_PREFIX: "org.appfair"
 
 on:
@@ -159,8 +160,8 @@ jobs:
       - name: "Configure Deployment Platforms"
         id: platforms
         run: |
-          echo "::set-output name=macos::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme AppFairApp archive 2>/dev/null | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'macosx' > /dev/null && echo enabled || echo disabled)"
-          echo "::set-output name=ios::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme AppFairApp archive 2>/dev/null | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'iphoneos' > /dev/null && echo enabled || echo disabled)"
+          echo "::set-output name=macos::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme $APP_TARGET archive 2>/dev/null | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'macosx' > /dev/null && echo enabled || echo disabled)"
+          echo "::set-output name=ios::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme $APP_TARGET archive 2>/dev/null | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'iphoneos' > /dev/null && echo enabled || echo disabled)"
 
       - name: "Resolve Swift Packages"
         run: |
@@ -174,7 +175,7 @@ jobs:
 
       - name: "Check Version"
         id: get_semver_tag
-        run: echo ::set-output name=semver_tag::$(xcodebuild -quiet -workspace ReleasePR/App.xcworkspace -showBuildSettings -json -scheme AppFairApp archive 2> /dev/null | jq -r '.[].buildSettings.MARKETING_VERSION')
+        run: echo ::set-output name=semver_tag::$(xcodebuild -quiet -workspace ReleasePR/App.xcworkspace -showBuildSettings -json -scheme "${{ env.APP_TARGET }}" archive 2> /dev/null | jq -r '.[].buildSettings.MARKETING_VERSION')
 
       - name: "Validate App: ${{ env.ORGNAME }} ${{ steps.get_semver_tag.outputs.semver_tag }}"
         env:
@@ -207,8 +208,9 @@ jobs:
         run: |
           xcodebuild archive \
             -workspace "App.xcworkspace" \
+            -jobs 1 \
             -configuration Release \
-            -scheme "AppFairApp" \
+            -scheme "${{ env.APP_TARGET }}" \
             -sdk "iphoneos" \
             -archivePath "staging/.${{ env.FAIR_APP_ARTIFACT }}-iOS.xcarchive" \
             CODE_SIGNING_REQUIRED=NO \
@@ -232,8 +234,9 @@ jobs:
         run: |
           xcodebuild archive \
             -workspace "App.xcworkspace" \
+            -jobs 1 \
             -configuration Release \
-            -scheme "AppFairApp" \
+            -scheme "${{ env.APP_TARGET }}" \
             -sdk "macosx" \
             -destination "platform=macOS" \
             -archivePath "staging/.${{ env.FAIR_APP_ARTIFACT }}-macOS.xcarchive" \
@@ -449,7 +452,7 @@ jobs:
 
       - name: "Check Version"
         id: get_semver_tag
-        run: echo ::set-output name=semver_tag::$(xcodebuild -quiet -workspace ReleasePR/App.xcworkspace -showBuildSettings -json -scheme AppFairApp archive 2> /dev/null | jq -r '.[].buildSettings.MARKETING_VERSION')
+        run: echo ::set-output name=semver_tag::$(xcodebuild -quiet -workspace ReleasePR/App.xcworkspace -showBuildSettings -json -scheme "${{ env.APP_TARGET }}" archive 2> /dev/null | jq -r '.[].buildSettings.MARKETING_VERSION')
 
       - name: "Validate App: ${{ env.PRTITLE }}"
         env:
@@ -509,8 +512,8 @@ jobs:
       - name: "Configure Deployment Platforms"
         id: platforms
         run: |
-          echo "::set-output name=macos::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme AppFairApp archive 2>/dev/null | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'macosx' > /dev/null && echo enabled || echo disabled)"
-          echo "::set-output name=ios::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme AppFairApp archive 2>/dev/null | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'iphoneos' > /dev/null && echo enabled || echo disabled)"
+          echo "::set-output name=macos::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme $APP_TARGET archive 2>/dev/null | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'macosx' > /dev/null && echo enabled || echo disabled)"
+          echo "::set-output name=ios::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme $APP_TARGET archive 2>/dev/null | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'iphoneos' > /dev/null && echo enabled || echo disabled)"
 
       - name: "Generate Icon"
         run: |
@@ -541,8 +544,9 @@ jobs:
         run: |
           xcodebuild archive \
             -workspace "App.xcworkspace" \
+            -jobs 1 \
             -configuration Release \
-            -scheme "AppFairApp" \
+            -scheme "${{ env.APP_TARGET }}" \
             -sdk "iphoneos" \
             -archivePath "staging/.${{ env.FAIR_APP_ARTIFACT }}-iOS.xcarchive" \
             CODE_SIGNING_REQUIRED=NO \
@@ -595,7 +599,7 @@ jobs:
         run: |
           echo "::set-output name=defined::true"
           # check the 'TESTFLIGHT_APP_ID' key in $FAIRGROUND.xcconfig
-          echo "::set-output name=appid::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme AppFairApp archive 2>/dev/null | jq -r '.[].buildSettings.TESTFLIGHT_APP_ID')"
+          echo "::set-output name=appid::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme $APP_TARGET archive 2>/dev/null | jq -r '.[].buildSettings.TESTFLIGHT_APP_ID')"
 
 
       - name: "Prepare PreFlight"
@@ -613,7 +617,7 @@ jobs:
           # so generate a shell scheme for AppFairApp
           mkdir -p App.xcworkspace/xcshareddata/xcschemes/
 
-          echo '<?xml version="1.0" encoding="UTF-8"?> <Scheme LastUpgradeVersion = "1340" version = "1.3"> <BuildAction parallelizeBuildables = "YES" buildImplicitDependencies = "YES"> <BuildActionEntries> <BuildActionEntry buildForTesting = "YES" buildForRunning = "YES" buildForProfiling = "YES" buildForArchiving = "YES" buildForAnalyzing = "YES"> <BuildableReference BuildableIdentifier = "primary" BlueprintName = "AppFairApp" ReferencedContainer = "container:project.xcodeproj"> </BuildableReference> </BuildActionEntry> </BuildActionEntries> </BuildAction> <ArchiveAction buildConfiguration = "Release" revealArchiveInOrganizer = "YES"> </ArchiveAction> </Scheme>' > App.xcworkspace/xcshareddata/xcschemes/AppFairApp.xcscheme
+          echo '<?xml version="1.0" encoding="UTF-8"?> <Scheme LastUpgradeVersion = "1340" version = "1.3"> <BuildAction parallelizeBuildables = "YES" buildImplicitDependencies = "YES"> <BuildActionEntries> <BuildActionEntry buildForTesting = "YES" buildForRunning = "YES" buildForProfiling = "YES" buildForArchiving = "YES" buildForAnalyzing = "YES"> <BuildableReference BuildableIdentifier = "primary" BlueprintName = "AppFairApp" ReferencedContainer = "container:project.xcodeproj"> </BuildableReference> </BuildActionEntry> </BuildActionEntries> </BuildAction> <ArchiveAction buildConfiguration = "Release" revealArchiveInOrganizer = "YES"> </ArchiveAction> </Scheme>' > App.xcworkspace/xcshareddata/xcschemes/$APP_TARGET.xcscheme
 
           security delete-keychain appstore.keychain || true
           security create-keychain -p "${{ secrets.TESTFLIGHT_CERTKEY_PASSWORD }}" appstore.keychain
@@ -653,7 +657,7 @@ jobs:
           lane :build do
             build_app({
               clean: true,
-              scheme: "AppFairApp",
+              scheme: "${{ env.APP_TARGET }}",
               workspace: "App.xcworkspace",
               export_method: "app-store",
               output_directory: "fastlane/output/",
@@ -737,8 +741,9 @@ jobs:
         run: |
           xcodebuild archive \
             -workspace "App.xcworkspace" \
+            -jobs 1 \
             -configuration Release \
-            -scheme "AppFairApp" \
+            -scheme "${{ env.APP_TARGET }}" \
             -sdk "macosx" \
             -destination "platform=macOS" \
             -archivePath "staging/.${{ env.FAIR_APP_ARTIFACT }}-macOS.xcarchive" \
