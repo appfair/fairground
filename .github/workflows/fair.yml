@@ -519,10 +519,19 @@ jobs:
       - name: "Stage Release Metadata"
         # copy over the un-processed assets from the ReleasePR/
         run: |
+          cp README.md staging/
+          cp LICENSE.txt staging/
+          cp COPYING.txt staging/
+
+          cp App.yml staging/
+          cp Package.resolved staging/
+          cp Info.plist staging/
+          cp Sandbox.entitlements staging/
+
           cp Assets.xcassets/AppIcon.appiconset/appicon-iphone-60x60@3x.png staging/"${{ env.FAIR_APP_ARTIFACT }}.png"
-          cp LICENSE.txt Package.resolved README.md Info.plist Sandbox.entitlements staging/
           cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.png staging/ || true
           cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.jpg staging/ || true
+
           ls -la staging/
           # log the checksum for each of the staging elements
           shasum -a 256 staging/*.*
@@ -681,9 +690,11 @@ jobs:
           end
           EOF
 
-
           # copy over the app icon
           cp -v "staging/${{ env.FAIR_APP_ARTIFACT }}.png" fastlane/metadata/app_icon.png
+
+          mkdir -p fastlane/metadata/screenshots/
+          cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.png fastlane/metadata/screenshots/ || true
 
           # Export the metadata from the App.yml into fastlane's metadata folder
           $FAIRTOOL fair metadata --export fastlane/metadata App.yml
