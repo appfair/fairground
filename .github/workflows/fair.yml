@@ -516,6 +516,17 @@ jobs:
         run: |
           $FAIRTOOL fair icon --org "${{ env.ORGNAME }}" --fair-properties "$FAIRGROUND.xcconfig" --accent-color Assets.xcassets/AccentColor.colorset/Contents.json --app-icon Assets.xcassets/AppIcon.appiconset/Contents.json
 
+      - name: "Stage Release Metadata"
+        # copy over the un-processed assets from the ReleasePR/
+        run: |
+          cp Assets.xcassets/AppIcon.appiconset/appicon-iphone-60x60@3x.png staging/"${{ env.FAIR_APP_ARTIFACT }}.png"
+          cp LICENSE.txt Package.resolved README.md Info.plist Sandbox.entitlements staging/
+          cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.png staging/ || true
+          cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.jpg staging/ || true
+          ls -la staging/
+          # log the checksum for each of the staging elements
+          shasum -a 256 staging/*.*
+
       - name: "Build iOS App"
         if: inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled'
         run: |
@@ -633,6 +644,7 @@ jobs:
             upload_to_testflight({
               skip_submission: false,
               skip_waiting_for_build_processing: true,
+              app_icon: "staging/${{ env.FAIR_APP_ARTIFACT }}.png"
             })
           end
           EOF
@@ -785,18 +797,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
         run: |
           gh workflow --repo "${{ inputs.fairground }}/${{ inputs.fairground }}.github.io" run "catalog.yml"
-
-      - name: Stage Release Metadata
-        # copy over the un-processed assets from the ReleasePR/
-        if: always()
-        run: |
-          cp Assets.xcassets/AppIcon.appiconset/appicon-iphone-60x60@3x.png staging/"${{ env.FAIR_APP_ARTIFACT }}.png"
-          cp LICENSE.txt Package.resolved README.md Info.plist Sandbox.entitlements staging/
-          cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.png staging/ || true
-          cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.jpg staging/ || true
-          ls -la staging/
-          # log the checksum for each of the staging elements
-          shasum -a 256 staging/*.*
 
       - name: "Upload Reproducible Build"
         # upload the trusted artifacts for each build for reproducible-builds
