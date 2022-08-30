@@ -364,7 +364,7 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent "staging/${{ env.PRODUCT_NAME }}.app" "${{ env.FAIR_APP_ARTIFACT }}-macOS.zip"
 
       - name: "Upload macOS Release"
-        if: inputs.target_macos == true && steps.platforms.outputs.macos == 'enabled'
+        if: inputs.target_macos == true && steps.platforms.outputs.macos == 'enabled' && startsWith(github.ref, 'refs/tags/')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -644,7 +644,7 @@ jobs:
             upload_to_testflight({
               skip_submission: false,
               skip_waiting_for_build_processing: true,
-              app_icon: "staging/${{ env.FAIR_APP_ARTIFACT }}.png"
+              #app_icon: "staging/${{ env.FAIR_APP_ARTIFACT }}.png",
             })
           end
           EOF
