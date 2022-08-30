@@ -610,10 +610,12 @@ jobs:
           security create-keychain -p "${{ secrets.TESTFLIGHT_CERTKEY_PASSWORD }}" appstore.keychain
           security default-keychain -s appstore.keychain
           security list-keychains -s appstore.keychain
+
           # import certificate
-          echo "${{ secrets.TESTFLIGHT_CERTKEY_P12_BASE64 }}" | base64 -d -o fastlane/appstore.p12
-          security import fastlane/appstore.p12 -k appstore.keychain -P "${{ secrets.TESTFLIGHT_CERTKEY_PASSWORD }}" -A
-          rm -f fastlane/appstore.p12
+          echo "${{ secrets.TESTFLIGHT_CERTKEY_P12_BASE64 }}" | base64 -d -o .privatecert.p12
+          security import .privatecert.p12 -k appstore.keychain -P "${{ secrets.TESTFLIGHT_CERTKEY_PASSWORD }}" -A
+          rm -f .privatecert.p12
+
           security set-key-partition-list -S "apple-tool:,apple:,codesign:" -s -k "${{ secrets.TESTFLIGHT_CERTKEY_PASSWORD }}" appstore.keychain
 
           # show valid identities
