@@ -631,7 +631,7 @@ jobs:
             build
             upload_to_testflight({
               skip_submission: false,
-              skip_waiting_for_build_processing: false,
+              skip_waiting_for_build_processing: true,
             })
           end
           EOF
@@ -656,6 +656,8 @@ jobs:
           # show valid identities
           security find-identity -v
 
+          # Export the metadata from the App.yml into fastlane's folder
+          # $FAIRTOOL deliver metadata -o fastlane/metadata/ App.yml
 
       - name: "PreFlight iOS"
         if: inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.preflight.outputs.appid > 0
