@@ -589,7 +589,7 @@ jobs:
           echo "::set-output name=appid::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme AppFairApp archive 2>/dev/null | jq -r '.[].buildSettings.TESTFLIGHT_APP_ID')"
 
 
-      - name: "Configure PreFlight"
+      - name: "Prepare PreFlight"
         if: env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.preflight.outputs.appid > 0
         env:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
@@ -599,8 +599,27 @@ jobs:
           TESTFLIGHT_KEY_CONTENTS: ${{ secrets.TESTFLIGHT_KEY_CONTENTS }}
           TESTFLIGHT_CODESIGNING_IDENTITY: ${{ secrets.TESTFLIGHT_CODESIGNING_IDENTITY }}
         run: |
-          mkdir fastlane/
-          brew install fastlane
+          # Fastlane requires that scheme be shared,
+          # but we rely on auto-generated schemes,
+          # so generate a shell scheme for AppFairApp
+          mkdir -p App.xcworkspace/xcshareddata/xcschemes/
+
+          echo '<?xml version="1.0" encoding="UTF-8"?> <Scheme LastUpgradeVersion = "1340" version = "1.3"> <BuildAction parallelizeBuildables = "YES" buildImplicitDependencies = "YES"> <BuildActionEntries> <BuildActionEntry buildForTesting = "YES" buildForRunning = "YES" buildForProfiling = "YES" buildForArchiving = "YES" buildForAnalyzing = "YES"> <BuildableReference BuildableIdentifier = "primary" BlueprintName = "AppFairApp" ReferencedContainer = "container:project.xcodeproj"> </BuildableReference> </BuildActionEntry> </BuildActionEntries> </BuildAction> <ArchiveAction buildConfiguration = "Release" revealArchiveInOrganizer = "YES"> </ArchiveAction> </Scheme>' > App.xcworkspace/xcshareddata/xcschemes/AppFairApp.xcscheme
+
+          security delete-keychain appstore.keychain || true
+          security create-keychain -p "${{ secrets.TESTFLIGHT_CERTKEY_PASSWORD }}" appstore.keychain
+          security default-keychain -s appstore.keychain
+          security list-keychains -s appstore.keychain
+          # import certificate
+          echo "${{ secrets.TESTFLIGHT_CERTKEY_P12_BASE64 }}" | base64 -d -o fastlane/appstore.p12
+          security import fastlane/appstore.p12 -k appstore.keychain -P "${{ secrets.TESTFLIGHT_CERTKEY_PASSWORD }}" -A
+          rm -f fastlane/appstore.p12
+          security set-key-partition-list -S "apple-tool:,apple:,codesign:" -s -k "${{ secrets.TESTFLIGHT_CERTKEY_PASSWORD }}" appstore.keychain
+
+          # show valid identities
+          security find-identity -v
+
+          mkdir -p fastlane/metadata/
 
           cat > fastlane/Fastfile << EOF
           lane :configure do
@@ -644,30 +663,18 @@ jobs:
             upload_to_testflight({
               skip_submission: false,
               skip_waiting_for_build_processing: true,
-              #app_icon: "staging/${{ env.FAIR_APP_ARTIFACT }}.png",
             })
           end
           EOF
 
-          # Fastlane requires that scheme be shared,
-          # but we rely on auto-generated schemes,
-          # so generate a shell scheme for AppFairApp
-          mkdir -p App.xcworkspace/xcshareddata/xcschemes/
 
-          echo '<?xml version="1.0" encoding="UTF-8"?> <Scheme LastUpgradeVersion = "1340" version = "1.3"> <BuildAction parallelizeBuildables = "YES" buildImplicitDependencies = "YES"> <BuildActionEntries> <BuildActionEntry buildForTesting = "YES" buildForRunning = "YES" buildForProfiling = "YES" buildForArchiving = "YES" buildForAnalyzing = "YES"> <BuildableReference BuildableIdentifier = "primary" BlueprintName = "AppFairApp" ReferencedContainer = "container:project.xcodeproj"> </BuildableReference> </BuildActionEntry> </BuildActionEntries> </BuildAction> <ArchiveAction buildConfiguration = "Release" revealArchiveInOrganizer = "YES"> </ArchiveAction> </Scheme>' > App.xcworkspace/xcshareddata/xcschemes/AppFairApp.xcscheme
+          # copy over the app icon
+          cp -v "staging/${{ env.FAIR_APP_ARTIFACT }}.png" fastlane/metadata/app_icon.png
 
-          security delete-keychain appstore.keychain || true
-          security create-keychain -p "${{ secrets.TESTFLIGHT_CERTKEY_PASSWORD }}" appstore.keychain
-          security default-keychain -s appstore.keychain
-          security list-keychains -s appstore.keychain
-          # import certificate
-          echo "${{ secrets.TESTFLIGHT_CERTKEY_P12_BASE64 }}" | base64 -d -o fastlane/appstore.p12
-          security import fastlane/appstore.p12 -k appstore.keychain -P "${{ secrets.TESTFLIGHT_CERTKEY_PASSWORD }}" -A
-          rm -f fastlane/appstore.p12
-          security set-key-partition-list -S "apple-tool:,apple:,codesign:" -s -k "${{ secrets.TESTFLIGHT_CERTKEY_PASSWORD }}" appstore.keychain
+          # Export the metadata from the App.yml into fastlane's metadata folder
+          $FAIRTOOL fair metadata --export fastlane/metadata App.yml
 
-          # show valid identities
-          security find-identity -v
+          brew install fastlane
 
       - name: "PreFlight iOS"
         if: inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.preflight.outputs.appid > 0
@@ -692,10 +699,6 @@ jobs:
           # Fastlane bug: if the platforms include "osx", then iOS won't work
           echo "SUPPORTED_PLATFORMS = iphoneos" >> $FAIRGROUND.xcconfig
           echo "PLATFORM_NAME = iphoneos" >> $FAIRGROUND.xcconfig
-
-          # Export the metadata from the App.yml into fastlane's metadata folder
-          #$FAIRTOOL fair metadata -o fastlane/metadata/ App.yml
-          $FAIRTOOL fair metadata App.yml
 
           fastlane beta
           # TODO: separate build and uploads phases
