@@ -667,24 +667,6 @@ jobs:
             })
           end
 
-          lane :build do
-            build_app({
-              clean: true,
-              scheme: "${APP_TARGET}",
-              workspace: "App.xcworkspace",
-              export_method: "app-store",
-              output_directory: "staging/fastlane/",
-              build_path: "fastlane/build/",
-              include_symbols: true,
-              sdk: ENV['PLATFORM_NAME'],
-              destination: ENV['FASTLANE_DESTINATION'],
-              export_team_id: ENV['TESTFLIGHT_TEAMID'],
-              codesigning_identity: ENV['TESTFLIGHT_CODESIGNING_IDENTITY'],
-              xcodebuild_formatter: '',
-              xcargs: "CODE_SIGN_STYLE='Manual' DEVELOPMENT_TEAM='" + ENV['TESTFLIGHT_TEAMID'] + "'",
-            })
-          end
-
           lane :metadata do
             deliver({
               force: true,
@@ -699,7 +681,6 @@ jobs:
           lane :beta do
             setup
             provision
-            #build
             #metadata
             upload_to_testflight({
               ipa: "staging/rebundled/${FAIR_APP_ARTIFACT}-iOS.ipa",
@@ -798,23 +779,6 @@ jobs:
           cd -
 
           fastlane beta --verbose
-
-          # retain the fastlane build
-          mkdir -p staging/fastbuild/
-          # the name will be "App Name.ipa"
-          cp -v staging/fastlane/*.ipa staging/fastbuild/
-
-          cd staging/fastbuild/
-          unzip -q *.ipa
-          cd -
-
-          cd staging/rebundled/
-          unzip -q *.ipa
-          cd -
-
-          # show differences for debugging
-          diff -r staging/fastbuild/ staging/rebundled/ || true
-
 
           # TODO: separate build and uploads phases
           #fastlane pilot upload
