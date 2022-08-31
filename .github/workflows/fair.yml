@@ -493,7 +493,7 @@ jobs:
 
           # needed to be able to ad-hoc codesign embedded frameworks
           plutil -replace 'com\.apple\.security\.cs\.disable-library-validation' -bool true Sandbox.entitlements
-        
+
           $FAIRTOOL fair validate --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project . --fair-properties "$FAIRGROUND.xcconfig"
 
           xcrun swift package resolve
@@ -601,7 +601,7 @@ jobs:
               xcodeproj: "project.xcodeproj",
             })
           end
-        
+
           lane :build do
             build_app({
               clean: true,
@@ -615,29 +615,18 @@ jobs:
               destination: ENV['FASTLANE_DESTINATION'],
               export_team_id: ENV['TESTFLIGHT_TEAMID'],
               codesigning_identity: ENV['TESTFLIGHT_CODESIGNING_IDENTITY'],
+              xcodebuild_formatter: '',
               xcargs: "CODE_SIGN_STYLE='Manual' DEVELOPMENT_TEAM='" + ENV['TESTFLIGHT_TEAMID'] + "'",
             })
           end
-        
+
           lane :beta do
             setup_ci if ENV['CI']
-
             configure
-
             build
-
-            #deliver({
-            #force: true,
-            #skip_metadata: true,
-            #skip_screenshots: true,
-            #skip_binary_upload: true,
-            #submit_for_review: false,
-            #automatic_release: false,
-            #})
-
             upload_to_testflight({
               skip_submission: false,
-              skip_waiting_for_build_processing: true,
+              skip_waiting_for_build_processing: false,
             })
           end
           EOF
@@ -656,6 +645,8 @@ jobs:
           mkdir -p fastlane/metadata/review_information
 
           # set some default review metadata
+          echo "https://github.com/${{ env.ORGNAME }}/App/discussions" > fastlane/metadata/support_url.txt
+          echo "https://${{ env.ORGNAME }}.github.io/App" > fastlane/metadata/marketing_url.txt
           echo "App" > fastlane/metadata/review_information/first_name.txt
           echo "Fair" > fastlane/metadata/review_information/last_name.txt
           echo "appfair@appfair.org" > fastlane/metadata/review_information/email_address.txt
@@ -740,7 +731,8 @@ jobs:
           echo "SUPPORTED_PLATFORMS = iphoneos" >> $FAIRGROUND.xcconfig
           echo "PLATFORM_NAME = iphoneos" >> $FAIRGROUND.xcconfig
 
-          fastlane beta
+          fastlane beta --verbose
+
           # TODO: separate build and uploads phases
           #fastlane pilot upload
           #fastlane deliver --skip_screenshots --force
