@@ -783,7 +783,8 @@ jobs:
 
           # retain the fastlane build
           mkdir -p staging/fastbuild/
-          cp -v *.ipa staging/fastbuild/
+          # the name will be "App Name.ipa"
+          cp -v staging/fastlane/*.ipa staging/fastbuild/
 
           cd staging/fastbuild/
           unzip -q *.ipa
