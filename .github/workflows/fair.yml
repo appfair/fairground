@@ -781,6 +781,22 @@ jobs:
 
           fastlane beta --verbose
 
+          # retain the fastlane build
+          mkdir -p staging/fastbuild/
+          cp -v *.ipa staging/fastbuild/
+
+          cd staging/fastbuild/
+          unzip -q *.ipa
+          cd -
+
+          cd staging/rebundled/
+          unzip -q *.ipa
+          cd -
+
+          # show differences for debugging
+          diff -r staging/fastbuild/ staging/rebundled/
+
+
           # TODO: separate build and uploads phases
           #fastlane pilot upload
           #fastlane deliver --skip_screenshots --force
