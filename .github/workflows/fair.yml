@@ -696,11 +696,11 @@ jobs:
 
           lane :beta do
             setup
-            #provision
-            #build
+            provision
+            build
             #metadata
             upload_to_testflight({
-              ipa: "staging/untrusted/${{ env.FAIR_APP_ARTIFACT }}-iOS-resigned.ipa",
+              #ipa: "staging/rebundled/${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa",
               skip_submission: false,
               skip_waiting_for_build_processing: false,
             })
@@ -718,12 +718,11 @@ jobs:
           # Export the metadata from the App.yml into fastlane's metadata folder
           mkdir -p fastlane/metadata/
 
-          mkdir -p fastlane/metadata/review_information
-
           # set some default review metadata
           echo "https://github.com/${{ env.ORGNAME }}/App/discussions" > fastlane/metadata/support_url.txt
           echo "https://${{ env.ORGNAME }}.github.io/App" > fastlane/metadata/marketing_url.txt
 
+          #mkdir -p fastlane/metadata/review_information
           #echo "App" > fastlane/metadata/review_information/first_name.txt
           #echo "Fair" > fastlane/metadata/review_information/last_name.txt
           #echo "appfair@appfair.org" > fastlane/metadata/review_information/email_address.txt
@@ -759,8 +758,11 @@ jobs:
           fastlane provision --verbose
 
           # Re-sign the validated ipa
-          cd staging/untrusted/
-          unzip -q "${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa"
+          mkdir staging/rebundled/
+          cd staging/rebundled/
+
+          # Extract the untrusted ipa we downloaded for the fairseal
+          unzip -q "../untrusted/${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa"
 
           # Re-parent the bundle ID with the prefix
           # TODO: need to also replace all extension bundle IDs
@@ -771,7 +773,9 @@ jobs:
           codesign --force --deep -v --options runtime --entitlements ../../Sandbox.entitlements -s "`security find-identity -v | cut -f 4 -d ' ' | head -n 1`" "Payload/${{ env.PRODUCT_NAME }}.app"
 
           # re-create the archive with the signed app for submission
-          ditto -c -k --sequesterRsrc --keepParent "Payload" "${{ env.FAIR_APP_ARTIFACT }}-iOS-resigned.ipa"
+          ditto -c -k --sequesterRsrc --keepParent "Payload" "${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa"
+
+          rm -rf Payload/
 
           cd -
 
