@@ -783,8 +783,6 @@ jobs:
           <dict>
             <key>application-identifier</key>
             <string>${TESTFLIGHT_TEAMID}.${PREFLIGHT_BUNDLE_PREFIX}.${BUNDLE_ID}</string>
-            <key>com.apple.security.application-groups</key>
-            <array/>
           </dict>
           </plist>
           EOF
