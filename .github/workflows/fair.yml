@@ -30,12 +30,15 @@
 name: "fair-ground"
 
 env:
-  FAIRTOOL: "fairtool"
-  #FAIRTOOL: "fairtool-head"
   FAIRGROUND: "appfair"
-  FAIRGROUND_LAUNCHPAD: "https://appfair.app/fair?app="
   APP_TARGET: "AppFairApp"
   PREFLIGHT_BUNDLE_PREFIX: "org.appfair"
+  FAIRGROUND_LAUNCHPAD: "https://appfair.app/fair?app="
+  HUB_REPO: "github.com"
+  HUB_PAGE: "github.io"
+  FAIRTOOL: "fairtool"
+  # fairtool-head will build from source, which adds a few minutes
+  #FAIRTOOL: "fairtool-head"
 
 on:
   workflow_call:
