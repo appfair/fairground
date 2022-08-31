@@ -335,16 +335,16 @@ jobs:
       - name: "Notarize App"
         if: steps.notarization_setup.outputs.defined == 'true'
         run: |
-          mkdir -p .notarization
           security delete-keychain fairsign.keychain || true
           security create-keychain -p "${{ secrets.NOTARY_CERTKEY_PASSWORD }}" fairsign.keychain
           security default-keychain -s fairsign.keychain
           security list-keychains -s fairsign.keychain
 
           # import certificate
-          echo "${{ secrets.NOTARY_CERTKEY_P12_BASE64 }}" | base64 -d -o .notarization/fairsign.p12
-          security import .notarization/fairsign.p12 -k fairsign.keychain -P "${{ secrets.NOTARY_CERTKEY_PASSWORD }}" -A
-          rm -f .notarization/fairsign.p12
+          mkdir -p .notarization
+          echo "${{ secrets.NOTARY_CERTKEY_P12_BASE64 }}" | base64 -d -o .notarization/certificate.p12
+          security import .notarization/certificate.p12 -k fairsign.keychain -A -P "${{ secrets.NOTARY_CERTKEY_PASSWORD }}"
+          rm -rf .notarization
 
           security set-key-partition-list -S "apple-tool:,apple:,codesign:" -s -k "${{ secrets.NOTARY_CERTKEY_PASSWORD }}" fairsign.keychain
 
@@ -550,112 +550,6 @@ jobs:
           echo "::set-output name=appid::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme $APP_TARGET archive 2>/dev/null | jq -r '.[].buildSettings.TESTFLIGHT_APP_ID')"
 
 
-      - name: "Prepare PreFlight"
-        if: env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.preflight.outputs.appid > 0
-        env:
-          GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
-          TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
-          TESTFLIGHT_ISSUER_ID: ${{ secrets.TESTFLIGHT_ISSUER_ID }}
-          TESTFLIGHT_KEY_ID: ${{ secrets.TESTFLIGHT_KEY_ID }}
-          TESTFLIGHT_KEY_CONTENTS: ${{ secrets.TESTFLIGHT_KEY_CONTENTS }}
-          TESTFLIGHT_CODESIGNING_IDENTITY: ${{ secrets.TESTFLIGHT_CODESIGNING_IDENTITY }}
-        run: |
-          # Fastlane requires that scheme be shared,
-          # but we rely on auto-generated schemes,
-          # so generate a shell scheme for AppFairApp
-          mkdir -p App.xcworkspace/xcshareddata/xcschemes/
-
-          echo '<?xml version="1.0" encoding="UTF-8"?> <Scheme LastUpgradeVersion = "1340" version = "1.3"> <BuildAction parallelizeBuildables = "YES" buildImplicitDependencies = "YES"> <BuildActionEntries> <BuildActionEntry buildForTesting = "YES" buildForRunning = "YES" buildForProfiling = "YES" buildForArchiving = "YES" buildForAnalyzing = "YES"> <BuildableReference BuildableIdentifier = "primary" BlueprintName = "AppFairApp" ReferencedContainer = "container:project.xcodeproj"> </BuildableReference> </BuildActionEntry> </BuildActionEntries> </BuildAction> <ArchiveAction buildConfiguration = "Release" revealArchiveInOrganizer = "YES"> </ArchiveAction> </Scheme>' > App.xcworkspace/xcshareddata/xcschemes/$APP_TARGET.xcscheme
-
-          security delete-keychain appstore.keychain || true
-          security create-keychain -p "${{ secrets.TESTFLIGHT_CERTKEY_PASSWORD }}" appstore.keychain
-          security default-keychain -s appstore.keychain
-          security list-keychains -s appstore.keychain
-
-          # import certificate
-          echo "${{ secrets.TESTFLIGHT_CERTKEY_P12_BASE64 }}" | base64 -d -o .privatecert.p12
-          security import .privatecert.p12 -k appstore.keychain -P "${{ secrets.TESTFLIGHT_CERTKEY_PASSWORD }}" -A
-          rm -f .privatecert.p12
-
-          security set-key-partition-list -S "apple-tool:,apple:,codesign:" -s -k "${{ secrets.TESTFLIGHT_CERTKEY_PASSWORD }}" appstore.keychain
-
-          # show valid identities
-          security find-identity -v
-
-          mkdir -p fastlane/metadata/
-
-          cat > fastlane/Fastfile << EOF
-          lane :configure do
-            app_store_connect_api_key({
-              key_id: ENV['TESTFLIGHT_KEY_ID'],
-              issuer_id: ENV['TESTFLIGHT_ISSUER_ID'],
-              key_content: ENV['TESTFLIGHT_KEY_CONTENTS'],
-            })
-            get_provisioning_profile({
-              platform: ENV['FASTLANE_PROFILE_PLATFORM'],
-              app_identifier: "${{ env.PREFLIGHT_BUNDLE_PREFIX}}.${{ env.BUNDLE_ID }}",
-              force: true,
-              fail_on_name_taken: false,
-            })
-            update_project_provisioning({
-              xcodeproj: "project.xcodeproj",
-            })
-          end
-
-          lane :build do
-            build_app({
-              clean: true,
-              scheme: "${{ env.APP_TARGET }}",
-              workspace: "App.xcworkspace",
-              export_method: "app-store",
-              output_directory: "fastlane/output/",
-              build_path: "fastlane/build",
-              include_symbols: true,
-              sdk: ENV['PLATFORM_NAME'],
-              destination: ENV['FASTLANE_DESTINATION'],
-              export_team_id: ENV['TESTFLIGHT_TEAMID'],
-              codesigning_identity: ENV['TESTFLIGHT_CODESIGNING_IDENTITY'],
-              xcodebuild_formatter: '',
-              xcargs: "CODE_SIGN_STYLE='Manual' DEVELOPMENT_TEAM='" + ENV['TESTFLIGHT_TEAMID'] + "'",
-            })
-          end
-
-          lane :beta do
-            setup_ci if ENV['CI']
-            configure
-            build
-            upload_to_testflight({
-              skip_submission: false,
-              skip_waiting_for_build_processing: false,
-            })
-          end
-          EOF
-
-          # copy over the app icon
-          cp -v "staging/${{ env.FAIR_APP_ARTIFACT }}.png" fastlane/metadata/app_icon.png
-
-          mkdir -p fastlane/screenshots/
-          cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.png fastlane/screenshots/ || true
-          # tolerate absent screenshots
-          rmdir fastlane/screenshots/ || true 
-
-          # Export the metadata from the App.yml into fastlane's metadata folder
-          mkdir -p fastlane/metadata/
-
-          mkdir -p fastlane/metadata/review_information
-
-          # set some default review metadata
-          echo "https://github.com/${{ env.ORGNAME }}/App/discussions" > fastlane/metadata/support_url.txt
-          echo "https://${{ env.ORGNAME }}.github.io/App" > fastlane/metadata/marketing_url.txt
-          echo "App" > fastlane/metadata/review_information/first_name.txt
-          echo "Fair" > fastlane/metadata/review_information/last_name.txt
-          echo "appfair@appfair.org" > fastlane/metadata/review_information/email_address.txt
-
-          $FAIRTOOL fair metadata --export fastlane/metadata App.yml
-
-          brew install fastlane
-
-
       - name: "Build iOS App"
         if: inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled'
         run: |
@@ -706,6 +600,123 @@ jobs:
             --project .
 
           mv -f staging/.artifact_stash/* staging/ || true # restore stash
+
+
+      - name: "Prepare PreFlight"
+        if: env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.preflight.outputs.appid > 0
+        env:
+          GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
+          TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
+          TESTFLIGHT_ISSUER_ID: ${{ secrets.TESTFLIGHT_ISSUER_ID }}
+          TESTFLIGHT_KEY_ID: ${{ secrets.TESTFLIGHT_KEY_ID }}
+          TESTFLIGHT_KEY_CONTENTS: ${{ secrets.TESTFLIGHT_KEY_CONTENTS }}
+          TESTFLIGHT_CODESIGNING_IDENTITY: ${{ secrets.TESTFLIGHT_CODESIGNING_IDENTITY }}
+        run: |
+          # Fastlane requires that scheme be shared,
+          # but we rely on auto-generated schemes,
+          # so generate a shell scheme for AppFairApp
+          mkdir -p App.xcworkspace/xcshareddata/xcschemes/
+
+          echo '<?xml version="1.0" encoding="UTF-8"?> <Scheme LastUpgradeVersion = "1340" version = "1.3"> <BuildAction parallelizeBuildables = "YES" buildImplicitDependencies = "YES"> <BuildActionEntries> <BuildActionEntry buildForTesting = "YES" buildForRunning = "YES" buildForProfiling = "YES" buildForArchiving = "YES" buildForAnalyzing = "YES"> <BuildableReference BuildableIdentifier = "primary" BlueprintName = "AppFairApp" ReferencedContainer = "container:project.xcodeproj"> </BuildableReference> </BuildActionEntry> </BuildActionEntries> </BuildAction> <ArchiveAction buildConfiguration = "Release" revealArchiveInOrganizer = "YES"> </ArchiveAction> </Scheme>' > App.xcworkspace/xcshareddata/xcschemes/$APP_TARGET.xcscheme
+
+          security delete-keychain appstore.keychain || true
+          security create-keychain -p "${{ secrets.TESTFLIGHT_CERTKEY_PASSWORD }}" appstore.keychain
+          security default-keychain -s appstore.keychain
+          security list-keychains -s appstore.keychain
+
+          # import certificate
+          mkdir -p .signing
+          echo "${{ secrets.TESTFLIGHT_CERTKEY_P12_BASE64 }}" | base64 -d -o .signing/certificate.p12
+          security import .signing/certificate.p12 -k appstore.keychain -A -P "${{ secrets.TESTFLIGHT_CERTKEY_PASSWORD }}"
+          rm -rf .signing
+
+          security set-key-partition-list -S "apple-tool:,apple:,codesign:" -s -k "${{ secrets.TESTFLIGHT_CERTKEY_PASSWORD }}" appstore.keychain
+
+          # show valid identities
+          security find-identity -v
+
+          mkdir -p fastlane/metadata/
+
+          cat > fastlane/Fastfile << EOF
+          lane :configure do
+            app_store_connect_api_key({
+              key_id: ENV['TESTFLIGHT_KEY_ID'],
+              issuer_id: ENV['TESTFLIGHT_ISSUER_ID'],
+              key_content: ENV['TESTFLIGHT_KEY_CONTENTS'],
+            })
+            get_provisioning_profile({
+              platform: ENV['FASTLANE_PROFILE_PLATFORM'],
+              app_identifier: "${{ env.PREFLIGHT_BUNDLE_PREFIX}}.${{ env.BUNDLE_ID }}",
+              force: true,
+              fail_on_name_taken: false,
+            })
+            update_project_provisioning({
+              xcodeproj: "project.xcodeproj",
+            })
+          end
+
+          lane :build do
+            build_app({
+              clean: true,
+              scheme: "${{ env.APP_TARGET }}",
+              workspace: "App.xcworkspace",
+              export_method: "app-store",
+              output_directory: "fastlane/output/",
+              build_path: "fastlane/build",
+              include_symbols: true,
+              sdk: ENV['PLATFORM_NAME'],
+              destination: ENV['FASTLANE_DESTINATION'],
+              export_team_id: ENV['TESTFLIGHT_TEAMID'],
+              codesigning_identity: ENV['TESTFLIGHT_CODESIGNING_IDENTITY'],
+              xcodebuild_formatter: '',
+              xcargs: "CODE_SIGN_STYLE='Manual' DEVELOPMENT_TEAM='" + ENV['TESTFLIGHT_TEAMID'] + "'",
+            })
+          end
+
+          lane :beta do
+            setup_ci if ENV['CI']
+            configure
+            build
+            deliver({
+              force: true,
+              skip_metadata: false,
+              skip_screenshots: false,
+              skip_binary_upload: true,
+              submit_for_review: false,
+              automatic_release: false,
+            })
+            upload_to_testflight({
+              skip_submission: true,
+              skip_waiting_for_build_processing: true,
+            })
+          end
+          EOF
+
+          # copy over the app icon
+          cp -v "staging/${{ env.FAIR_APP_ARTIFACT }}.png" fastlane/metadata/app_icon.png
+
+          mkdir -p fastlane/screenshots/
+          cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.png fastlane/screenshots/ || true
+          # tolerate absent screenshots
+          rmdir fastlane/screenshots/ || true 
+
+          # Export the metadata from the App.yml into fastlane's metadata folder
+          mkdir -p fastlane/metadata/
+
+          mkdir -p fastlane/metadata/review_information
+
+          # set some default review metadata
+          echo "https://github.com/${{ env.ORGNAME }}/App/discussions" > fastlane/metadata/support_url.txt
+          echo "https://${{ env.ORGNAME }}.github.io/App" > fastlane/metadata/marketing_url.txt
+          echo "App" > fastlane/metadata/review_information/first_name.txt
+          echo "Fair" > fastlane/metadata/review_information/last_name.txt
+          echo "appfair@appfair.org" > fastlane/metadata/review_information/email_address.txt
+
+          $FAIRTOOL fair metadata --export fastlane/metadata App.yml
+
+          brew install fastlane
+
+
 
       - name: "PreFlight iOS"
         if: inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.preflight.outputs.appid > 0
