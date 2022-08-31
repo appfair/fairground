@@ -638,35 +638,27 @@ jobs:
           # show valid identities
           security find-identity -v
 
-          # Re-sign the validated ipa
-          cd staging/untrusted/
-          unzip -q "${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa"
-
-          # Re-parent the bundle ID with the prefix
-          # TODO: need to also replace all extension bundle IDs
-          plutil -replace 'CFBundleIdentifier' -string "${{ env.PREFLIGHT_BUNDLE_PREFIX}}.${{ env.BUNDLE_ID }}" "Payload/${{ env.PRODUCT_NAME }}.app/Info.plist"
-
-          codesign --force --deep -v --options runtime --entitlements ../../Sandbox.entitlements -s "`security find-identity -v | cut -f 4 -d ' ' | head -n 1`" "Payload/${{ env.PRODUCT_NAME }}.app"
-
-          # re-create the archive with the signed app for submission
-          ditto -c -k --sequesterRsrc --keepParent "Payload" "${{ env.FAIR_APP_ARTIFACT }}-iOS-resigned.ipa"
-
-          cd -
-
           mkdir -p fastlane/metadata/
 
           cat > fastlane/Fastfile << EOF
-          lane :configure do
+
+          lane :setup do
+            setup_ci if ENV['CI']
             app_store_connect_api_key({
               key_id: ENV['TESTFLIGHT_KEY_ID'],
               issuer_id: ENV['TESTFLIGHT_ISSUER_ID'],
               key_content: ENV['TESTFLIGHT_KEY_CONTENTS'],
             })
+          end
+
+          lane :provision do
+            setup
             get_provisioning_profile({
               platform: ENV['FASTLANE_PROFILE_PLATFORM'],
               app_identifier: "${{ env.PREFLIGHT_BUNDLE_PREFIX}}.${{ env.BUNDLE_ID }}",
               force: true,
               fail_on_name_taken: false,
+              filename: "fastlane/embedded.mobileprovision"
             })
             update_project_provisioning({
               xcodeproj: "project.xcodeproj",
@@ -691,18 +683,22 @@ jobs:
             })
           end
 
+          lane :metadata do
+            deliver({
+              force: true,
+              skip_metadata: false,
+              skip_screenshots: true,
+              skip_binary_upload: true,
+              submit_for_review: false,
+              automatic_release: false,
+            })
+          end
+
           lane :beta do
-            setup_ci if ENV['CI']
-            configure
-            build
-            #deliver({
-            #force: true,
-            #skip_metadata: false,
-            #skip_screenshots: true,
-            #skip_binary_upload: true,
-            #submit_for_review: false,
-            #automatic_release: false,
-            #})
+            setup
+            #provision
+            #build
+            #metadata
             upload_to_testflight({
               ipa: "staging/untrusted/${{ env.FAIR_APP_ARTIFACT }}-iOS-resigned.ipa",
               skip_submission: false,
@@ -735,10 +731,6 @@ jobs:
 
           $FAIRTOOL fair metadata --export fastlane/metadata App.yml
 
-          brew install fastlane
-
-
-
       - name: "PreFlight iOS"
         if: inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.preflight.outputs.appid > 0
         env:
@@ -762,6 +754,26 @@ jobs:
           # Fastlane bug: if the platforms include "osx", then iOS won't work
           echo "SUPPORTED_PLATFORMS = iphoneos" >> $FAIRGROUND.xcconfig
           echo "PLATFORM_NAME = iphoneos" >> $FAIRGROUND.xcconfig
+
+          # download the fastlane/embedded.mobileprovision
+          fastlane provision --verbose
+
+          # Re-sign the validated ipa
+          cd staging/untrusted/
+          unzip -q "${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa"
+
+          # Re-parent the bundle ID with the prefix
+          # TODO: need to also replace all extension bundle IDs
+          plutil -replace 'CFBundleIdentifier' -string "${{ env.PREFLIGHT_BUNDLE_PREFIX}}.${{ env.BUNDLE_ID }}" "Payload/${{ env.PRODUCT_NAME }}.app/Info.plist"
+
+          cp "../../fastlane/embedded.mobileprovision" "Payload/${{ env.PRODUCT_NAME }}.app/embedded.mobileprovision"
+
+          codesign --force --deep -v --options runtime --entitlements ../../Sandbox.entitlements -s "`security find-identity -v | cut -f 4 -d ' ' | head -n 1`" "Payload/${{ env.PRODUCT_NAME }}.app"
+
+          # re-create the archive with the signed app for submission
+          ditto -c -k --sequesterRsrc --keepParent "Payload" "${{ env.FAIR_APP_ARTIFACT }}-iOS-resigned.ipa"
+
+          cd -
 
           fastlane beta --verbose
 
