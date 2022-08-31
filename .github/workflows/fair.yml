@@ -134,7 +134,7 @@ jobs:
     name: "Fork Apply"
     if: inputs.fairseal_issuer == '' && github.repository_owner != 'appfair'
     runs-on: macos-12
-    timeout-minutes: 60
+    timeout-minutes: 30
     steps:
       - name: "Initialize fair-ground"
         env:
@@ -408,7 +408,7 @@ jobs:
     name: "Integrate Release"
     if: inputs.fairseal_issuer != ''
     runs-on: macos-12
-    timeout-minutes: 60
+    timeout-minutes: 30
     steps:
       - name: "Initialize fair-ground"
         env:
@@ -582,6 +582,8 @@ jobs:
           mkdir -p staging/.artifact_stash/
           mv -f staging/*.zip staging/.artifact_stash/ || true # don't seal the macOS zip for iOS seal
 
+          mkdir -p staging/untrusted/
+
           $FAIRTOOL fair fairseal \
             --verbose \
             --hub "github.com/${{ inputs.fairground }}" \
@@ -590,6 +592,7 @@ jobs:
             --org "${{ env.ORGNAME }}" \
             --fairseal-key "${{ secrets.APP_FAIR_FAIRSEAL_KEY }}" \
             --trusted-artifact "staging/${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa" \
+            --untrusted-artifact "staging/untrusted/${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa" \
             --disassembler=/usr/bin/otool \
             --permitted-diffs 0 \
             --retry-duration 600 \
@@ -634,6 +637,16 @@ jobs:
 
           # show valid identities
           security find-identity -v
+
+          # Re-sign the validated ipa
+          cd staging/untrusted/
+          unzip "${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa"
+
+          # TODO: need to also replace all extension bundle IDs
+          plutil -replace 'CFBundleIdentifier' -string "${{ env.PREFLIGHT_BUNDLE_PREFIX}}.${{ env.BUNDLE_ID }}" "Payload/${{ env.PRODUCT_NAME }}.app/Info.plist"
+
+          codesign --force --deep -v --options runtime --entitlements ../../Sandbox.entitlements -s "`security find-identity -v | cut -f 4 -d ' ' | head -n 1`" "Payload/${{ env.PRODUCT_NAME }}.app"
+          cd -
 
           mkdir -p fastlane/metadata/
 
@@ -686,6 +699,7 @@ jobs:
               automatic_release: false,
             })
             upload_to_testflight({
+              #ipa: "staging/untrusted/${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa",
               skip_submission: true,
               skip_waiting_for_build_processing: true,
             })
@@ -708,9 +722,11 @@ jobs:
           # set some default review metadata
           echo "https://github.com/${{ env.ORGNAME }}/App/discussions" > fastlane/metadata/support_url.txt
           echo "https://${{ env.ORGNAME }}.github.io/App" > fastlane/metadata/marketing_url.txt
-          echo "App" > fastlane/metadata/review_information/first_name.txt
-          echo "Fair" > fastlane/metadata/review_information/last_name.txt
-          echo "appfair@appfair.org" > fastlane/metadata/review_information/email_address.txt
+
+          #echo "App" > fastlane/metadata/review_information/first_name.txt
+          #echo "Fair" > fastlane/metadata/review_information/last_name.txt
+          #echo "appfair@appfair.org" > fastlane/metadata/review_information/email_address.txt
+          #echo "appfair@appfair.org" > fastlane/metadata/review_information/phone_number.txt
 
           $FAIRTOOL fair metadata --export fastlane/metadata App.yml
 
@@ -808,6 +824,8 @@ jobs:
           mkdir -p staging/.artifact_stash/
           mv -f staging/*.ipa staging/.artifact_stash/ || true # don't seal the ipa when sealing macOS
 
+          mkdir -p staging/untrusted/
+
           # if the seals match, we indicate success by publishing
           # the SHA256 for the release's pull request;
           # client apps will use this hash to verify that the untrusted
@@ -821,6 +839,7 @@ jobs:
             --org "${{ env.ORGNAME }}" \
             --fairseal-key "${{ secrets.APP_FAIR_FAIRSEAL_KEY }}" \
             --trusted-artifact "staging/${{ env.FAIR_APP_ARTIFACT }}-macOS.zip" \
+            --untrusted-artifact "staging/untrusted/${{ env.FAIR_APP_ARTIFACT }}-macOS.zip" \
             --disassembler=/usr/bin/otool \
             --permitted-diffs 0 \
             --retry-duration 600 \
