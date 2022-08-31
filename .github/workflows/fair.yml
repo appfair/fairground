@@ -654,7 +654,7 @@ jobs:
             setup
             get_provisioning_profile({
               platform: ENV['FASTLANE_PROFILE_PLATFORM'],
-              app_identifier: "${{ env.PREFLIGHT_BUNDLE_PREFIX}}.${{ env.BUNDLE_ID }}",
+              app_identifier: "${PREFLIGHT_BUNDLE_PREFIX}.${BUNDLE_ID}",
               force: true,
               fail_on_name_taken: false,
               filename: "fastlane/embedded.mobileprovision"
@@ -667,7 +667,7 @@ jobs:
           lane :build do
             build_app({
               clean: true,
-              scheme: "${{ env.APP_TARGET }}",
+              scheme: "${APP_TARGET}",
               workspace: "App.xcworkspace",
               export_method: "app-store",
               output_directory: "staging/fastlane/",
@@ -696,10 +696,10 @@ jobs:
           lane :beta do
             setup
             provision
-            build
+            #build
             #metadata
             upload_to_testflight({
-              #ipa: "staging/rebundled/${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa",
+              ipa: "staging/rebundled/${FAIR_APP_ARTIFACT}-iOS.ipa",
               skip_submission: false,
               skip_waiting_for_build_processing: false,
             })
@@ -707,7 +707,7 @@ jobs:
           EOF
 
           # copy over the app icon
-          cp -v "staging/${{ env.FAIR_APP_ARTIFACT }}.png" fastlane/metadata/app_icon.png
+          cp -v "staging/${FAIR_APP_ARTIFACT}.png" fastlane/metadata/app_icon.png
 
           mkdir -p fastlane/screenshots/
           cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.png fastlane/screenshots/ || true
@@ -718,8 +718,8 @@ jobs:
           mkdir -p fastlane/metadata/
 
           # set some default review metadata
-          echo "https://github.com/${{ env.ORGNAME }}/App/discussions" > fastlane/metadata/support_url.txt
-          echo "https://${{ env.ORGNAME }}.github.io/App" > fastlane/metadata/marketing_url.txt
+          echo "https://github.com/${ORGNAME}/App/discussions" > fastlane/metadata/support_url.txt
+          echo "https://${ORGNAME}.github.io/App" > fastlane/metadata/marketing_url.txt
 
           #mkdir -p fastlane/metadata/review_information
           #echo "App" > fastlane/metadata/review_information/first_name.txt
