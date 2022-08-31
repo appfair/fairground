@@ -640,12 +640,17 @@ jobs:
 
           # Re-sign the validated ipa
           cd staging/untrusted/
-          unzip "${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa"
+          unzip -q "${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa"
 
+          # Re-parent the bundle ID with the prefix
           # TODO: need to also replace all extension bundle IDs
           plutil -replace 'CFBundleIdentifier' -string "${{ env.PREFLIGHT_BUNDLE_PREFIX}}.${{ env.BUNDLE_ID }}" "Payload/${{ env.PRODUCT_NAME }}.app/Info.plist"
 
           codesign --force --deep -v --options runtime --entitlements ../../Sandbox.entitlements -s "`security find-identity -v | cut -f 4 -d ' ' | head -n 1`" "Payload/${{ env.PRODUCT_NAME }}.app"
+
+          # re-create the archive with the signed app for submission
+          ditto -c -k --sequesterRsrc --keepParent "Payload" "${{ env.FAIR_APP_ARTIFACT }}-iOS-resigned.ipa"
+
           cd -
 
           mkdir -p fastlane/metadata/
@@ -674,8 +679,8 @@ jobs:
               scheme: "${{ env.APP_TARGET }}",
               workspace: "App.xcworkspace",
               export_method: "app-store",
-              output_directory: "fastlane/output/",
-              build_path: "fastlane/build",
+              output_directory: "staging/fastlane/",
+              build_path: "fastlane/build/",
               include_symbols: true,
               sdk: ENV['PLATFORM_NAME'],
               destination: ENV['FASTLANE_DESTINATION'],
@@ -690,18 +695,18 @@ jobs:
             setup_ci if ENV['CI']
             configure
             build
-            deliver({
-              force: true,
-              skip_metadata: false,
-              skip_screenshots: false,
-              skip_binary_upload: true,
-              submit_for_review: false,
-              automatic_release: false,
-            })
+            #deliver({
+            #force: true,
+            #skip_metadata: false,
+            #skip_screenshots: true,
+            #skip_binary_upload: true,
+            #submit_for_review: false,
+            #automatic_release: false,
+            #})
             upload_to_testflight({
-              #ipa: "staging/untrusted/${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa",
-              skip_submission: true,
-              skip_waiting_for_build_processing: true,
+              ipa: "staging/untrusted/${{ env.FAIR_APP_ARTIFACT }}-iOS-resigned.ipa",
+              skip_submission: false,
+              skip_waiting_for_build_processing: false,
             })
           end
           EOF
