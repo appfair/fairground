@@ -749,8 +749,8 @@ jobs:
         run: |
           # Update config with re-bundled identifier
           cp $FAIRGROUND.xcconfig $FAIRGROUND.xcconfig.clean
-          echo "PRODUCT_BUNDLE_IDENTIFIER = ${{ env.PREFLIGHT_BUNDLE_PREFIX }}.${{ env.BUNDLE_ID }}" >> $FAIRGROUND.xcconfig
-          echo "DEVELOPMENT_TEAM = ${{ env.TESTFLIGHT_TEAMID }}" >> $FAIRGROUND.xcconfig
+          echo "PRODUCT_BUNDLE_IDENTIFIER = ${PREFLIGHT_BUNDLE_PREFIX}.${BUNDLE_ID}" >> $FAIRGROUND.xcconfig
+          echo "DEVELOPMENT_TEAM = ${TESTFLIGHT_TEAMID}" >> $FAIRGROUND.xcconfig
 
           # Fastlane bug: if the platforms include "osx", then iOS won't work
           echo "SUPPORTED_PLATFORMS = iphoneos" >> $FAIRGROUND.xcconfig
@@ -764,11 +764,11 @@ jobs:
           cd staging/rebundled/
 
           # Extract the untrusted ipa we downloaded for the fairseal
-          unzip -q "../untrusted/${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa"
+          unzip -q "../untrusted/${FAIR_APP_ARTIFACT}-iOS.ipa"
 
           # Re-parent the bundle ID with the prefix
           # TODO: need to also replace all extension bundle IDs
-          plutil -replace 'CFBundleIdentifier' -string "${{ env.PREFLIGHT_BUNDLE_PREFIX}}.${{ env.BUNDLE_ID }}" "Payload/${PRODUCT_NAME}.app/Info.plist"
+          plutil -replace 'CFBundleIdentifier' -string "${PREFLIGHT_BUNDLE_PREFIX}.${BUNDLE_ID}" "Payload/${PRODUCT_NAME}.app/Info.plist"
 
           cp "../../fastlane/embedded.mobileprovision" "Payload/${PRODUCT_NAME}.app/embedded.mobileprovision"
 
@@ -781,6 +781,8 @@ jobs:
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
           <dict>
+            <key>application-identifier</key>
+            <string>${TESTFLIGHT_TEAMID}.${PREFLIGHT_BUNDLE_PREFIX}.${BUNDLE_ID}</string>
             <key>com.apple.security.application-groups</key>
             <array/>
           </dict>
@@ -791,7 +793,7 @@ jobs:
           codesign --entitlements "../sandbox-ios.entitlements" --force -v --options runtime --generate-entitlement-der --preserve-metadata="identifier,entitlements,flags" -s "${SIGNID}" "Payload/${PRODUCT_NAME}.app"
 
           # re-create the archive with the signed app for submission
-          ditto -c -k --sequesterRsrc --keepParent "Payload" "${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa"
+          ditto -c -k --sequesterRsrc --keepParent "Payload" "${FAIR_APP_ARTIFACT}-iOS.ipa"
 
           rm -rf Payload/
 
@@ -829,10 +831,10 @@ jobs:
             -workspace "App.xcworkspace" \
             -jobs 1 \
             -configuration Release \
-            -scheme "${{ env.APP_TARGET }}" \
+            -scheme "${APP_TARGET}" \
             -sdk "macosx" \
             -destination "platform=macOS" \
-            -archivePath "staging/.${{ env.FAIR_APP_ARTIFACT }}-macOS.xcarchive" \
+            -archivePath "staging/.${FAIR_APP_ARTIFACT}-macOS.xcarchive" \
             CODE_SIGNING_REQUIRED=YES \
             CODE_SIGNING_ALLOWED=YES \
             AD_HOC_CODE_SIGNING_ALLOWED=YES \
@@ -842,24 +844,24 @@ jobs:
             OTHER_CODE_SIGN_FLAGS="--deep --timestamp=none" \
             OTHER_LIBTOOLFLAGS="-D" \
             FAIRAPP_PRODUCT_NAME="${PRODUCT_NAME}"
-          shasum -a 256 "staging/.${{ env.FAIR_APP_ARTIFACT }}-macOS.xcarchive/Products/Applications"/*.app/Contents/MacOS/*
+          shasum -a 256 "staging/.${FAIR_APP_ARTIFACT}-macOS.xcarchive/Products/Applications"/*.app/Contents/MacOS/*
 
           echo '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>method</key><string>mac-application</string><key>signingStyle</key><string>automatic</string></dict></plist>' > "staging/exportOptions.plist"
 
           xcodebuild \
             -exportArchive \
-            -archivePath "staging/.${{ env.FAIR_APP_ARTIFACT }}-macOS.xcarchive" \
+            -archivePath "staging/.${FAIR_APP_ARTIFACT}-macOS.xcarchive" \
             -exportPath "staging/" \
             -exportOptionsPlist "staging/exportOptions.plist"
 
           codesign --verify --verbose=5 "staging/${PRODUCT_NAME}.app"
           codesign -dv --verbose=5 "staging/${PRODUCT_NAME}.app"
           codesign -d --entitlements - "staging/${PRODUCT_NAME}.app"
-          ditto -c -k --sequesterRsrc --keepParent "staging/${PRODUCT_NAME}.app" "staging/${{ env.FAIR_APP_ARTIFACT }}-macOS.zip"
+          ditto -c -k --sequesterRsrc --keepParent "staging/${PRODUCT_NAME}.app" "staging/${FAIR_APP_ARTIFACT}-macOS.zip"
 
           # show the binary checksum
           openssl sha256 "staging/${PRODUCT_NAME}.app/Contents/MacOS/"*
-          openssl sha256 "staging/${{ env.FAIR_APP_ARTIFACT }}-macOS.zip"
+          openssl sha256 "staging/${FAIR_APP_ARTIFACT}-macOS.zip"
 
           rm -rf "staging/${PRODUCT_NAME}.app" # cleanup
 
@@ -873,7 +875,7 @@ jobs:
 
         run: |
           # build the URL for the GitHub download artifact
-          ZIPURL="https://github.com/${{ env.ORGNAME }}/App/releases/download/${{ steps.get_semver_tag.outputs.semver_tag }}/${{ env.FAIR_APP_ARTIFACT }}-macOS.zip" 
+          ZIPURL="https://github.com/${ORGNAME}/App/releases/download/${{ steps.get_semver_tag.outputs.semver_tag }}/${FAIR_APP_ARTIFACT}-macOS.zip" 
 
           echo "Generating fairseal for: $ZIPURL"
 
@@ -892,10 +894,10 @@ jobs:
             --hub "github.com/${{ inputs.fairground }}" \
             --base-repo "App" \
             --token "${{ secrets.APP_FAIR_BOT_TOKEN }}" \
-            --org "${{ env.ORGNAME }}" \
+            --org "${ORGNAME}" \
             --fairseal-key "${{ secrets.APP_FAIR_FAIRSEAL_KEY }}" \
-            --trusted-artifact "staging/${{ env.FAIR_APP_ARTIFACT }}-macOS.zip" \
-            --untrusted-artifact "staging/untrusted/${{ env.FAIR_APP_ARTIFACT }}-macOS.zip" \
+            --trusted-artifact "staging/${FAIR_APP_ARTIFACT}-macOS.zip" \
+            --untrusted-artifact "staging/untrusted/${FAIR_APP_ARTIFACT}-macOS.zip" \
             --disassembler=/usr/bin/otool \
             --permitted-diffs 0 \
             --retry-duration 600 \
