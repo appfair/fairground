@@ -652,6 +652,14 @@ jobs:
 
           # Export the metadata from the App.yml into fastlane's metadata folder
           mkdir -p fastlane/metadata/
+
+          mkdir -p fastlane/metadata/review_information
+
+          # set some default review metadata
+          echo "App" > fastlane/metadata/review_information/first_name.txt
+          echo "Fair" > fastlane/metadata/review_information/last_name.txt
+          echo "appfair@appfair.org" > fastlane/metadata/review_information/email_address.txt
+
           $FAIRTOOL fair metadata --export fastlane/metadata App.yml
 
           brew install fastlane
