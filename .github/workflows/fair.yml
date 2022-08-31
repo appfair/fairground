@@ -781,12 +781,14 @@ jobs:
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
           <dict>
+            <key>com.apple.security.application-groups</key>
+            <array/>
           </dict>
           </plist>
           EOF
 
-          codesign --entitlements "../sandbox-ios.entitlements" --force -v --options runtime --generate-entitlement-der --preserve-metadata="identifier,entitlements,flags" -s "${SIGNID}" "Payload/${PRODUCT_NAME}.app"/Frameworks/*.framework
-          codesign --force -v --options runtime --generate-entitlement-der --preserve-metadata="identifier,entitlements,flags" -s "${SIGNID}" "Payload/${PRODUCT_NAME}.app"
+          codesign --force -v --options runtime --generate-entitlement-der --preserve-metadata="identifier,entitlements,flags" -s "${SIGNID}" "Payload/${PRODUCT_NAME}.app"/Frameworks/*.framework
+          codesign --entitlements "../sandbox-ios.entitlements" --force -v --options runtime --generate-entitlement-der --preserve-metadata="identifier,entitlements,flags" -s "${SIGNID}" "Payload/${PRODUCT_NAME}.app"
 
           # re-create the archive with the signed app for submission
           ditto -c -k --sequesterRsrc --keepParent "Payload" "${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa"
