@@ -637,7 +637,7 @@ jobs:
 
             upload_to_testflight({
               skip_submission: false,
-              skip_waiting_for_build_processing: false,
+              skip_waiting_for_build_processing: true,
             })
           end
           EOF
@@ -735,6 +735,7 @@ jobs:
           fastlane beta
           # TODO: separate build and uploads phases
           #fastlane pilot upload
+          #fastlane deliver --skip_screenshots --force
 
           mv $FAIRGROUND.xcconfig.clean $FAIRGROUND.xcconfig
 
