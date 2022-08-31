@@ -217,7 +217,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             AD_HOC_CODE_SIGNING_ALLOWED=YES \
             CODE_SIGN_IDENTITY="-" \
-            FAIRAPP_PRODUCT_NAME="${{ env.PRODUCT_NAME }}"
+            FAIRAPP_PRODUCT_NAME="${PRODUCT_NAME}"
 
           cp -a "staging/.${{ env.FAIR_APP_ARTIFACT }}-iOS.xcarchive/Products/Applications" "staging/Payload"
           ditto -c -k --sequesterRsrc --keepParent "staging/Payload" "${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa"
@@ -248,7 +248,7 @@ jobs:
             CODE_SIGN_IDENTITY="-" \
             OTHER_CODE_SIGN_FLAGS="--deep --timestamp=none" \
             OTHER_LIBTOOLFLAGS="-D" \
-            FAIRAPP_PRODUCT_NAME="${{ env.PRODUCT_NAME }}"
+            FAIRAPP_PRODUCT_NAME="${PRODUCT_NAME}"
 
           echo '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>method</key><string>mac-application</string><key>signingStyle</key><string>automatic</string><key>uploadBitcode</key><false/><key>compileBitcode</key><false/><key>uploadSymbols</key><false/></dict></plist>' > "staging/.exportOptions.plist"
 
@@ -258,12 +258,12 @@ jobs:
             -exportPath "staging/" \
             -exportOptionsPlist "staging/.exportOptions.plist"
 
-          codesign --verify --verbose=5 "staging/${{ env.PRODUCT_NAME }}.app"
-          codesign -dv --verbose=5 "staging/${{ env.PRODUCT_NAME }}.app"
-          codesign -d --entitlements - "staging/${{ env.PRODUCT_NAME }}.app"
+          codesign --verify --verbose=5 "staging/${PRODUCT_NAME}.app"
+          codesign -dv --verbose=5 "staging/${PRODUCT_NAME}.app"
+          codesign -d --entitlements - "staging/${PRODUCT_NAME}.app"
 
           # create the zip file
-          ditto -c -k --sequesterRsrc --keepParent "staging/${{ env.PRODUCT_NAME }}.app" "${{ env.FAIR_APP_ARTIFACT }}-macOS.zip"
+          ditto -c -k --sequesterRsrc --keepParent "staging/${PRODUCT_NAME}.app" "${{ env.FAIR_APP_ARTIFACT }}-macOS.zip"
 
       # Notarization is not required for the App Fair, but a developer
       # can opt to notarize their own build which will allow them to 
@@ -352,19 +352,19 @@ jobs:
           security find-identity -v
 
           # re-sign the app with the imported certificate and the identity
-          codesign --force --deep -v --options runtime --entitlements "Sandbox.entitlements" -s "`security find-identity -v | cut -f 4 -d ' ' | head -n 1`" "staging/${{ env.PRODUCT_NAME }}.app"
+          codesign --force --deep -v --options runtime --entitlements "Sandbox.entitlements" -s "`security find-identity -v | cut -f 4 -d ' ' | head -n 1`" "staging/${PRODUCT_NAME}.app"
 
           # re-create the archive with the signed app for submission
-          ditto -c -k --sequesterRsrc --keepParent "staging/${{ env.PRODUCT_NAME }}.app" "${{ env.FAIR_APP_ARTIFACT }}-macOS.zip"
+          ditto -c -k --sequesterRsrc --keepParent "staging/${PRODUCT_NAME}.app" "${{ env.FAIR_APP_ARTIFACT }}-macOS.zip"
 
           # perform notarization and wait for success
           xcrun notarytool submit --wait --progress --apple-id "${{ secrets.NOTARY_USERID }}" --password "${{ secrets.NOTARY_PASSWORD }}" --team-id "${{ secrets.NOTARY_TEAMID }}" "${{ env.FAIR_APP_ARTIFACT }}-macOS.zip"
 
           # staple the notarization ticket to the app
-          xcrun stapler staple "staging/${{ env.PRODUCT_NAME }}.app"
+          xcrun stapler staple "staging/${PRODUCT_NAME}.app"
 
           # re-create the archive with the signed & stapled artifact
-          ditto -c -k --sequesterRsrc --keepParent "staging/${{ env.PRODUCT_NAME }}.app" "${{ env.FAIR_APP_ARTIFACT }}-macOS.zip"
+          ditto -c -k --sequesterRsrc --keepParent "staging/${PRODUCT_NAME}.app" "${{ env.FAIR_APP_ARTIFACT }}-macOS.zip"
 
       - name: "Upload macOS Release"
         if: inputs.target_macos == true && steps.platforms.outputs.macos == 'enabled' && startsWith(github.ref, 'refs/tags/')
@@ -426,7 +426,6 @@ jobs:
           echo "FAIR_APP_ARTIFACT=${{ env.ORGNAME }}" >> $GITHUB_ENV
           echo "PRODUCT_NAME=$(echo ${{ env.ORGNAME }} | tr '-' ' ')" >> $GITHUB_ENV
           echo "BUNDLE_ID=app.$(echo ${{ env.ORGNAME }})" >> $GITHUB_ENV
-          echo "BUILDING PRODUCT: ${{ env.PRODUCT_NAME }}"
 
       - name: "Checkout Base Fairground"
         uses: actions/checkout@v2
@@ -564,7 +563,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             AD_HOC_CODE_SIGNING_ALLOWED=YES \
             CODE_SIGN_IDENTITY="-" \
-            FAIRAPP_PRODUCT_NAME="${{ env.PRODUCT_NAME }}"
+            FAIRAPP_PRODUCT_NAME="${PRODUCT_NAME}"
 
           cp -a "staging/.${{ env.FAIR_APP_ARTIFACT }}-iOS.xcarchive/Products/Applications" "staging/Payload"
           ditto -c -k --sequesterRsrc --keepParent "staging/Payload" "staging/${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa"
@@ -766,11 +765,14 @@ jobs:
 
           # Re-parent the bundle ID with the prefix
           # TODO: need to also replace all extension bundle IDs
-          plutil -replace 'CFBundleIdentifier' -string "${{ env.PREFLIGHT_BUNDLE_PREFIX}}.${{ env.BUNDLE_ID }}" "Payload/${{ env.PRODUCT_NAME }}.app/Info.plist"
+          plutil -replace 'CFBundleIdentifier' -string "${{ env.PREFLIGHT_BUNDLE_PREFIX}}.${{ env.BUNDLE_ID }}" "Payload/${PRODUCT_NAME}.app/Info.plist"
 
-          cp "../../fastlane/embedded.mobileprovision" "Payload/${{ env.PRODUCT_NAME }}.app/embedded.mobileprovision"
+          cp "../../fastlane/embedded.mobileprovision" "Payload/${PRODUCT_NAME}.app/embedded.mobileprovision"
 
-          codesign --force --deep -v --options runtime --entitlements ../../Sandbox.entitlements -s "`security find-identity -v | cut -f 4 -d ' ' | head -n 1`" "Payload/${{ env.PRODUCT_NAME }}.app"
+          # sign both the frameworks and the parent app
+          SIGNID=$(security find-identity -v | cut -f 4 -d ' ' | head -n 1)
+          codesign --force -v --options runtime --generate-entitlement-der --preserve-metadata="identifier,entitlements,flags" --entitlements ../../Sandbox.entitlements -s "${SIGNID}" "Payload/${PRODUCT_NAME}.app"/Frameworks/*.framework
+          codesign --force -v --options runtime --generate-entitlement-der --preserve-metadata="identifier,entitlements,flags" --entitlements ../../Sandbox.entitlements -s "${SIGNID}" "Payload/${PRODUCT_NAME}.app"
 
           # re-create the archive with the signed app for submission
           ditto -c -k --sequesterRsrc --keepParent "Payload" "${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa"
@@ -795,7 +797,7 @@ jobs:
           cd -
 
           # show differences for debugging
-          diff -r staging/fastbuild/ staging/rebundled/
+          diff -r staging/fastbuild/ staging/rebundled/ || true
 
 
           # TODO: separate build and uploads phases
@@ -823,7 +825,7 @@ jobs:
             CODE_SIGN_IDENTITY="-" \
             OTHER_CODE_SIGN_FLAGS="--deep --timestamp=none" \
             OTHER_LIBTOOLFLAGS="-D" \
-            FAIRAPP_PRODUCT_NAME="${{ env.PRODUCT_NAME }}"
+            FAIRAPP_PRODUCT_NAME="${PRODUCT_NAME}"
           shasum -a 256 "staging/.${{ env.FAIR_APP_ARTIFACT }}-macOS.xcarchive/Products/Applications"/*.app/Contents/MacOS/*
 
           echo '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>method</key><string>mac-application</string><key>signingStyle</key><string>automatic</string></dict></plist>' > "staging/exportOptions.plist"
@@ -834,16 +836,16 @@ jobs:
             -exportPath "staging/" \
             -exportOptionsPlist "staging/exportOptions.plist"
 
-          codesign --verify --verbose=5 "staging/${{ env.PRODUCT_NAME }}.app"
-          codesign -dv --verbose=5 "staging/${{ env.PRODUCT_NAME }}.app"
-          codesign -d --entitlements - "staging/${{ env.PRODUCT_NAME }}.app"
-          ditto -c -k --sequesterRsrc --keepParent "staging/${{ env.PRODUCT_NAME }}.app" "staging/${{ env.FAIR_APP_ARTIFACT }}-macOS.zip"
+          codesign --verify --verbose=5 "staging/${PRODUCT_NAME}.app"
+          codesign -dv --verbose=5 "staging/${PRODUCT_NAME}.app"
+          codesign -d --entitlements - "staging/${PRODUCT_NAME}.app"
+          ditto -c -k --sequesterRsrc --keepParent "staging/${PRODUCT_NAME}.app" "staging/${{ env.FAIR_APP_ARTIFACT }}-macOS.zip"
 
           # show the binary checksum
-          openssl sha256 "staging/${{ env.PRODUCT_NAME }}.app/Contents/MacOS/"*
+          openssl sha256 "staging/${PRODUCT_NAME}.app/Contents/MacOS/"*
           openssl sha256 "staging/${{ env.FAIR_APP_ARTIFACT }}-macOS.zip"
 
-          rm -rf "staging/${{ env.PRODUCT_NAME }}.app" # cleanup
+          rm -rf "staging/${PRODUCT_NAME}.app" # cleanup
 
 
       # compare the contents of the PR's un-trusted artifacts with
