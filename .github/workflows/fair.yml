@@ -771,8 +771,9 @@ jobs:
 
           # sign both the frameworks and the parent app
           SIGNID=$(security find-identity -v | cut -f 4 -d ' ' | head -n 1)
-          codesign --force -v --options runtime --generate-entitlement-der --preserve-metadata="identifier,entitlements,flags" --entitlements ../../Sandbox.entitlements -s "${SIGNID}" "Payload/${PRODUCT_NAME}.app"/Frameworks/*.framework
-          codesign --force -v --options runtime --generate-entitlement-der --preserve-metadata="identifier,entitlements,flags" --entitlements ../../Sandbox.entitlements -s "${SIGNID}" "Payload/${PRODUCT_NAME}.app"
+          #--entitlements ../../Sandbox.entitlements 
+          codesign --force -v --options runtime --generate-entitlement-der --preserve-metadata="identifier,entitlements,flags" -s "${SIGNID}" "Payload/${PRODUCT_NAME}.app"/Frameworks/*.framework
+          codesign --force -v --options runtime --generate-entitlement-der --preserve-metadata="identifier,entitlements,flags" -s "${SIGNID}" "Payload/${PRODUCT_NAME}.app"
 
           # re-create the archive with the signed app for submission
           ditto -c -k --sequesterRsrc --keepParent "Payload" "${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa"
