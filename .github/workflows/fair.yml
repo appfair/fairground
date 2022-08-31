@@ -30,8 +30,8 @@
 name: "fair-ground"
 
 env:
-  #FAIRTOOL: "fairtool"
-  FAIRTOOL: "fairtool-head"
+  FAIRTOOL: "fairtool"
+  #FAIRTOOL: "fairtool-head"
   FAIRGROUND: "appfair"
   FAIRGROUND_LAUNCHPAD: "https://appfair.app/fair?app="
   APP_TARGET: "AppFairApp"
