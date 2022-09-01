@@ -185,7 +185,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # needed to be able to ad-hoc codesign embedded frameworks
-          plutil -replace 'com\.apple\.security\.cs\.disable-library-validation' -bool true Sandbox.entitlements
+          plutil -replace 'com\.apple\.security\.cs\.disable-library-validation' -bool true sandbox-macos.entitlements
           $FAIRTOOL fair validate --verbose --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project . --fair-properties "$FAIRGROUND.xcconfig"
 
       # Verifies that pages are enabled for this repository
@@ -355,7 +355,7 @@ jobs:
           security find-identity -v
 
           # re-sign the app with the imported certificate and the identity
-          codesign --force --deep -v --options runtime --entitlements "Sandbox.entitlements" -s "`security find-identity -v | cut -f 4 -d ' ' | head -n 1`" "staging/${PRODUCT_NAME}.app"
+          codesign --force --deep -v --options runtime --entitlements "sandbox-macos.entitlements" -s "`security find-identity -v | cut -f 4 -d ' ' | head -n 1`" "staging/${PRODUCT_NAME}.app"
 
           # re-create the archive with the signed app for submission
           ditto -c -k --sequesterRsrc --keepParent "staging/${PRODUCT_NAME}.app" "${{ env.FAIR_APP_ARTIFACT }}-macOS.zip"
@@ -385,7 +385,7 @@ jobs:
         # Convert plists to XML for easier parsing.
         run: |
           cp Assets.xcassets/AppIcon.appiconset/appicon-iphone-60x60@3x.png staging/"${{ env.FAIR_APP_ARTIFACT }}.png"
-          cp App.yml COPYING.txt README.md LICENSE.txt Info.plist Sandbox.entitlements Package.resolved staging/
+          cp App.yml COPYING.txt README.md LICENSE.txt Info.plist sandbox-macos.entitlements sandbox-ios.entitlements Package.resolved staging/
           cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.png staging/ || true
           cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.jpg staging/ || true
           ls -la staging/
@@ -461,7 +461,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
         run: |
           # needed to be able to ad-hoc codesign embedded frameworks
-          plutil -replace 'com\.apple\.security\.cs\.disable-library-validation' -bool true ReleasePR/Sandbox.entitlements
+          plutil -replace 'com\.apple\.security\.cs\.disable-library-validation' -bool true ReleasePR/sandbox-macos.entitlements
           $FAIRTOOL fair validate \
             --base . \
             --project ReleasePR \
@@ -494,7 +494,7 @@ jobs:
           file Assets.xcassets/AppIcon.appiconset/*.*
 
           # needed to be able to ad-hoc codesign embedded frameworks
-          plutil -replace 'com\.apple\.security\.cs\.disable-library-validation' -bool true Sandbox.entitlements
+          plutil -replace 'com\.apple\.security\.cs\.disable-library-validation' -bool true sandbox-macos.entitlements
 
           $FAIRTOOL fair validate --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project . --fair-properties "$FAIRGROUND.xcconfig"
 
@@ -531,7 +531,8 @@ jobs:
           cp App.yml staging/
           cp Package.resolved staging/
           cp Info.plist staging/
-          cp Sandbox.entitlements staging/
+          cp sandbox-macos.entitlements staging/
+          cp sandbox-ios.entitlements staging/
 
           cp Assets.xcassets/AppIcon.appiconset/appicon-iphone-60x60@3x.png staging/"${{ env.FAIR_APP_ARTIFACT }}.png"
           cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.png staging/ || true
@@ -755,21 +756,12 @@ jobs:
 
           # sign both the frameworks and the parent app
           SIGNID=$(security find-identity -v | cut -f 4 -d ' ' | head -n 1)
-          #--entitlements ../../Sandbox.entitlements 
          
-          cat > ../sandbox-ios.entitlements << EOF
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>application-identifier</key>
-            <string>${TESTFLIGHT_TEAMID}.${PREFLIGHT_BUNDLE_PREFIX}.${BUNDLE_ID}</string>
-          </dict>
-          </plist>
-          EOF
+          # add: application-identifier = <string>${TESTFLIGHT_TEAMID}.${PREFLIGHT_BUNDLE_PREFIX}.${BUNDLE_ID}</string>
+          plutil -replace 'application-identifier' -string "${TESTFLIGHT_TEAMID}.${PREFLIGHT_BUNDLE_PREFIX}.${BUNDLE_ID}" "../../sandbox-ios.entitlements"
 
           codesign --force -v --options runtime --generate-entitlement-der --preserve-metadata="identifier,entitlements,flags" -s "${SIGNID}" "Payload/${PRODUCT_NAME}.app"/Frameworks/*.framework
-          codesign --entitlements "../sandbox-ios.entitlements" --force -v --options runtime --generate-entitlement-der --preserve-metadata="identifier,entitlements,flags" -s "${SIGNID}" "Payload/${PRODUCT_NAME}.app"
+          codesign --entitlements "../../sandbox-ios.entitlements" --force -v --options runtime --generate-entitlement-der --preserve-metadata="identifier,entitlements,flags" -s "${SIGNID}" "Payload/${PRODUCT_NAME}.app"
 
           # re-create the archive with the signed app for submission
           ditto -c -k --sequesterRsrc --keepParent "Payload" "${FAIR_APP_ARTIFACT}-iOS.ipa"
