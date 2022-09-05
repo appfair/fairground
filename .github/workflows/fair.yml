@@ -618,13 +618,7 @@ jobs:
           TESTFLIGHT_KEY_CONTENTS: ${{ secrets.TESTFLIGHT_KEY_CONTENTS }}
           TESTFLIGHT_CODESIGNING_IDENTITY: ${{ secrets.TESTFLIGHT_CODESIGNING_IDENTITY }}
         run: |
-          # Fastlane requires that scheme be shared,
-          # but we rely on auto-generated schemes,
-          # so generate a shell scheme for AppFairApp
-          mkdir -p App.xcworkspace/xcshareddata/xcschemes/
-
-          echo '<?xml version="1.0" encoding="UTF-8"?> <Scheme LastUpgradeVersion = "1340" version = "1.3"> <BuildAction parallelizeBuildables = "YES" buildImplicitDependencies = "YES"> <BuildActionEntries> <BuildActionEntry buildForTesting = "YES" buildForRunning = "YES" buildForProfiling = "YES" buildForArchiving = "YES" buildForAnalyzing = "YES"> <BuildableReference BuildableIdentifier = "primary" BlueprintName = "AppFairApp" ReferencedContainer = "container:project.xcodeproj"> </BuildableReference> </BuildActionEntry> </BuildActionEntries> </BuildAction> <ArchiveAction buildConfiguration = "Release" revealArchiveInOrganizer = "YES"> </ArchiveAction> </Scheme>' > App.xcworkspace/xcshareddata/xcschemes/$APP_TARGET.xcscheme
-
+          # Setup the keychain and import the signing cert
           security delete-keychain appstore.keychain || true
           security create-keychain -p "${{ secrets.TESTFLIGHT_CERTKEY_PASSWORD }}" appstore.keychain
           security default-keychain -s appstore.keychain
@@ -729,16 +723,7 @@ jobs:
           SUPPORTED_PLATFORMS: iphoneos
           CI: true
         run: |
-          # Update config with re-bundled identifier
-          cp $FAIRGROUND.xcconfig $FAIRGROUND.xcconfig.clean
-          echo "PRODUCT_BUNDLE_IDENTIFIER = ${PREFLIGHT_BUNDLE_PREFIX}.${BUNDLE_ID}" >> $FAIRGROUND.xcconfig
-          echo "DEVELOPMENT_TEAM = ${TESTFLIGHT_TEAMID}" >> $FAIRGROUND.xcconfig
-
-          # Fastlane bug: if the platforms include "osx", then iOS won't work
-          echo "SUPPORTED_PLATFORMS = iphoneos" >> $FAIRGROUND.xcconfig
-          echo "PLATFORM_NAME = iphoneos" >> $FAIRGROUND.xcconfig
-
-          # download the fastlane/embedded.mobileprovision
+          # acquire embedded.mobileprovision
           fastlane provision --verbose
 
           # Re-sign the validated ipa
