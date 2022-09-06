@@ -726,6 +726,8 @@ jobs:
           # acquire embedded.mobileprovision
           fastlane provision --verbose
 
+          #$FAIRTOOL app rebundle --export fastlane/metadata App.yml
+
           # Re-sign the validated ipa
           mkdir staging/rebundled/
           cd staging/rebundled/
@@ -761,7 +763,8 @@ jobs:
           #fastlane pilot upload
           #fastlane deliver --skip_screenshots --force
 
-          mv $FAIRGROUND.xcconfig.clean $FAIRGROUND.xcconfig
+          #cp $FAIRGROUND.xcconfig $FAIRGROUND.xcconfig.clean
+          #mv $FAIRGROUND.xcconfig.clean $FAIRGROUND.xcconfig
 
       - name: "Build macOS App"
         if: inputs.target_macos == true && steps.platforms.outputs.macos == 'enabled'
