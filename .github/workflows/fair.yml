@@ -186,7 +186,7 @@ jobs:
         run: |
           # needed to be able to ad-hoc codesign embedded frameworks
           plutil -replace 'com\.apple\.security\.cs\.disable-library-validation' -bool true sandbox-macos.entitlements
-          $FAIRTOOL fair validate --verbose --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project . --fair-properties "$FAIRGROUND.xcconfig"
+          $FAIRTOOL fair validate --verbose --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project . --fair-properties "$FAIRGROUND.xcconfig" --allow-license "AGPL-3.0"
 
       # Verifies that pages are enabled for this repository
       - name: "Check Repository Page: https://${{ env.ORGNAME }}.github.io/App"
@@ -496,7 +496,7 @@ jobs:
           # needed to be able to ad-hoc codesign embedded frameworks
           plutil -replace 'com\.apple\.security\.cs\.disable-library-validation' -bool true sandbox-macos.entitlements
 
-          $FAIRTOOL fair validate --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project . --fair-properties "$FAIRGROUND.xcconfig"
+          $FAIRTOOL fair validate --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project . --fair-properties "$FAIRGROUND.xcconfig" --allow-license "AGPL-3.0"
 
           xcrun swift package resolve
           cp -a .build/checkouts Dependencies
