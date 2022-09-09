@@ -680,7 +680,7 @@ jobs:
             upload_to_testflight({
               ipa: "staging/rebundled/${FAIR_APP_ARTIFACT}-iOS.ipa",
               skip_submission: false,
-              skip_waiting_for_build_processing: false,
+              skip_waiting_for_build_processing: true,
             })
           end
           EOF
