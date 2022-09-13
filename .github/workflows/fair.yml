@@ -573,7 +573,7 @@ jobs:
           cp -a "staging/.${{ env.FAIR_APP_ARTIFACT }}-iOS.xcarchive/Products/Applications" "staging/Payload"
           ditto -c -k --sequesterRsrc --keepParent "staging/Payload" "staging/${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa"
 
-      - name: "Reproduce sealed iOS build"
+      - name: "Replicate sealed iOS build"
         if: inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled'
         env:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
@@ -821,7 +821,7 @@ jobs:
 
       # compare the contents of the PR's un-trusted artifacts with
       # the contents of the base fair-ground's trusted artifacts
-      - name: "Reproduce sealed macOS build"
+      - name: "Replicate sealed macOS build"
         if: inputs.target_macos == true && steps.platforms.outputs.macos == 'enabled'
         env:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
@@ -876,7 +876,7 @@ jobs:
         run: |
           gh workflow --repo "${{ inputs.fairground }}/${{ inputs.fairground }}.github.io" run "catalog.yml"
 
-      - name: "Upload Reproducible Build"
+      - name: "Upload Build Artifacts"
         # upload the trusted artifacts for each build for reproducible-builds
         uses: actions/upload-artifact@v2
         if: always()
