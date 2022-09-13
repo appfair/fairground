@@ -573,7 +573,7 @@ jobs:
           cp -a "staging/.${{ env.FAIR_APP_ARTIFACT }}-iOS.xcarchive/Products/Applications" "staging/Payload"
           ditto -c -k --sequesterRsrc --keepParent "staging/Payload" "staging/${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa"
 
-      - name: "Generate iOS fairseal"
+      - name: "Reproduce sealed iOS build"
         if: inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled'
         env:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
@@ -821,7 +821,7 @@ jobs:
 
       # compare the contents of the PR's un-trusted artifacts with
       # the contents of the base fair-ground's trusted artifacts
-      - name: "Generate macOS fairseal"
+      - name: "Reproduce sealed macOS build"
         if: inputs.target_macos == true && steps.platforms.outputs.macos == 'enabled'
         env:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
