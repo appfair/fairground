@@ -683,6 +683,7 @@ jobs:
               skip_submission: false,
               skip_waiting_for_build_processing: false,
               distribute_external: true,
+              changelog: "Bug fixes and performance improvements.",
               groups: [
                 "Beta"
               ]
