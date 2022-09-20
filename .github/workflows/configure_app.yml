@@ -38,6 +38,8 @@ on:
         type: boolean
         required: true
 
+permissions: read-all|write-all
+
 jobs:
   configure:
     name: "Configure App"
