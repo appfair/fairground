@@ -88,6 +88,8 @@ jobs:
         run: gh repo view "${{ env.ORGNAME }}/App" --json hasIssuesEnabled | jq -e '.hasIssuesEnabled'
 
       - name: "Configure Landing Page"
+        # Resource not accessible by integration
+        if: false
         run: gh repo edit "${{ env.ORGNAME }}/App" --homepage "http://${{ env.ORGNAME }}.appfair.net"
 
       # Verifies that discussions are enabled for this repository
