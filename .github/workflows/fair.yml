@@ -208,7 +208,7 @@ jobs:
 
       - name: "Test iOS App"
         # need to set up test scheme to make this work
-        if: startsWith(github.ref, 'refs/tags/') == false && inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' 
+        if: inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' && startsWith(github.ref, 'refs/tags/') == false
         run: |
           mkdir -p project.xcodeproj/xcshareddata/xcschemes/
           # schemes are no saved by default, so make a test action
@@ -216,8 +216,8 @@ jobs:
           xcodebuild test -configuration Debug -workspace "App.xcworkspace" -scheme "AppFairApp" -sdk "iphonesimulator" -destination "platform=iOS Simulator,name=iPhone 13"
           rm project.xcodeproj/xcshareddata/xcschemes/AppFairApp.xcscheme
 
-      - name: "Build iOS App"
-        if: inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled'
+      - name: "Archive iOS App"
+        if: inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' && startsWith(github.ref, 'refs/tags/') && startsWith(github.ref, 'refs/tags/')
         run: |
           xcodebuild archive \
             -workspace "App.xcworkspace" \
@@ -243,8 +243,7 @@ jobs:
           gh release upload "${GITHUB_REF#refs/tags/}" -- "${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa"
 
       - name: "Test macOS App"
-        # need to set up test scheme to make this work
-        if: startsWith(github.ref, 'refs/tags/') == false && inputs.target_macos == true && steps.platforms.outputs.macos == 'enabled' 
+        if: inputs.target_macos == true && steps.platforms.outputs.macos == 'enabled' && startsWith(github.ref, 'refs/tags/') == false
         run: |
           mkdir -p project.xcodeproj/xcshareddata/xcschemes/
           # schemes are no saved by default, so make a test action
@@ -252,8 +251,8 @@ jobs:
           xcodebuild test -configuration Debug -workspace "App.xcworkspace" -scheme "AppFairApp" -sdk "macosx" -destination "platform=macosx"
           rm project.xcodeproj/xcshareddata/xcschemes/AppFairApp.xcscheme
 
-      - name: "Build macOS App"
-        if: inputs.target_macos == true && steps.platforms.outputs.macos == 'enabled'
+      - name: "Archive macOS App"
+        if: inputs.target_macos == true && steps.platforms.outputs.macos == 'enabled' && startsWith(github.ref, 'refs/tags/')
         run: |
           xcodebuild archive \
             -workspace "App.xcworkspace" \
