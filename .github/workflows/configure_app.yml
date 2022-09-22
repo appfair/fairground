@@ -90,7 +90,9 @@ jobs:
           ref: ${{ github.ref }}
 
       - name: "Configure Landing Page"
-        run: echo "${{ env.ORGNAME }}.appfair.net" | tr '[:upper:]' '[:lower:]' > docs/CNAME
+        run: |
+          echo "${{ env.ORGNAME }}.appfair.net" | tr '[:upper:]' '[:lower:]' > docs/CNAME
+          git add docs/CNAME
 
       - name: "Configure: ${{env.BUNDLE_ID}} ${{ inputs.version }}"
         run: |
