@@ -41,7 +41,7 @@ on:
 jobs:
   configure:
     name: "Configure App"
-    runs-on: ubuntu-latest
+    runs-on: macos-12
 
     steps:
       - name: "Setup App: ${{ github.repository_owner }}"
@@ -89,22 +89,22 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.ref }}
 
-      - name: "Configure Landing Page"
+      - name: "Update App Configuration"
         run: |
-          echo "${{ env.ORGNAME }}.appfair.net" | tr '[:upper:]' '[:lower:]' > docs/CNAME
-          git add docs/CNAME
+          brew install fair-ground/tool/fairtool
+          fairtool app refresh
 
       - name: "Configure: ${{env.BUNDLE_ID}} ${{ inputs.version }}"
         run: |
           echo "Creating release ${{env.BUNDLE_ID}} ${{ inputs.version }}"
 
           # Update the app name in the README.md
-          sed -i 's;App-Name;${{ env.ORGNAME }};g' README.md
+          sed -I "" 's;App-Name;${{ env.ORGNAME }};g' README.md
 
           # Update the appfair.xcconfig with the app name and version
-          sed -i "s;^PRODUCT_NAME[ ]*=.*;PRODUCT_NAME = ${{ env.PRODUCT_NAME }};g" appfair.xcconfig
-          sed -i "s;^PRODUCT_BUNDLE_IDENTIFIER[ ]*=.*;PRODUCT_BUNDLE_IDENTIFIER = ${{ env.BUNDLE_ID }};g" appfair.xcconfig
-          sed -i "s;^MARKETING_VERSION[ ]*=.*;MARKETING_VERSION = ${{ inputs.version }};g" appfair.xcconfig
+          sed -I "" "s;^PRODUCT_NAME[ ]*=.*;PRODUCT_NAME = ${{ env.PRODUCT_NAME }};g" appfair.xcconfig
+          sed -I "" "s;^PRODUCT_BUNDLE_IDENTIFIER[ ]*=.*;PRODUCT_BUNDLE_IDENTIFIER = ${{ env.BUNDLE_ID }};g" appfair.xcconfig
+          sed -I "" "s;^MARKETING_VERSION[ ]*=.*;MARKETING_VERSION = ${{ inputs.version }};g" appfair.xcconfig
 
           SUPPORTED_PLATFORMS=""
           if [ "${{ inputs.build_macos }}" == "true" ]; then
@@ -116,7 +116,7 @@ jobs:
 
           echo "Building SUPPORTED_PLATFORMS: ${SUPPORTED_PLATFORMS}"
          
-          sed -i "s;^SUPPORTED_PLATFORMS[ ]*=.*;SUPPORTED_PLATFORMS =${SUPPORTED_PLATFORMS};g" appfair.xcconfig
+          sed -I "" "s;^SUPPORTED_PLATFORMS[ ]*=.*;SUPPORTED_PLATFORMS =${SUPPORTED_PLATFORMS};g" appfair.xcconfig
 
           git config --global user.name 'fair-ground action'
           git config --global user.email 'fair-ground@users.noreply.github.com'
