@@ -74,8 +74,8 @@ jobs:
 
       - name: "Configure Landing Page"
         # Resource not accessible by integration
-        if: false
-        run: gh repo edit "${{ env.ORGNAME }}/App" --homepage "http://${{ env.ORGNAME }}.appfair.net"
+        #run: gh repo edit "${{ env.ORGNAME }}/App" --homepage "http://${{ env.ORGNAME }}.appfair.net"
+        run: echo "${{ env.ORGNAME }}.appfair.net" | tr '[:upper:]' '[:lower:]' > docs/CNAME
 
       # Verifies that discussions are enabled for this repository
       # There is no API for this yet, so we just use curl
