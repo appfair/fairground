@@ -180,12 +180,15 @@ jobs:
           swift package resolve
           cp Package.resolved Sources/App/Resources/
 
+      - name: "Install ${{ env.FAIRTOOL }}"
+        run: |
+          brew install fair-ground/tool/$FAIRTOOL
+          $FAIRTOOL version
+
       - name: "Validate Project with ${{ env.FAIRTOOL }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          brew install fair-ground/tool/$FAIRTOOL
-          $FAIRTOOL version
           $FAIRTOOL app refresh
           $FAIRTOOL fair validate --verbose --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project . --fair-properties "$FAIRGROUND.xcconfig" --allow-license "AGPL-3.0"
           $FAIRTOOL fair icon --org "${{ env.ORGNAME }}" --fair-properties $FAIRGROUND.xcconfig --accent-color Assets.xcassets/AccentColor.colorset/Contents.json --app-icon Assets.xcassets/AppIcon.appiconset/Contents.json
@@ -468,7 +471,7 @@ jobs:
           fetch-depth: 0
           submodules: false
 
-      - name: "Check Version: ${{ steps.get_semver_tag.outputs.semver_tag }}"
+      - name: "Check Version"
         id: get_semver_tag
         run: echo ::set-output name=semver_tag::$(xcodebuild -quiet -workspace ReleasePR/App.xcworkspace -showBuildSettings -json -scheme "${{ env.APP_TARGET }}" archive 2> /dev/null | jq -r '.[].buildSettings.MARKETING_VERSION')
 
@@ -483,12 +486,10 @@ jobs:
           brew install fair-ground/tool/$FAIRTOOL
           $FAIRTOOL version
 
-      - name: "Validate Project with ${{ env.FAIRTOOL }}"
+      - name: "Validate Release ${{ steps.get_semver_tag.outputs.semver_tag }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          brew install fair-ground/tool/$FAIRTOOL
-          $FAIRTOOL version
           $FAIRTOOL app refresh
           #$FAIRTOOL fair validate --verbose --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project . --fair-properties "$FAIRGROUND.xcconfig" --allow-license "AGPL-3.0"
           $FAIRTOOL fair validate --base .  --project ReleasePR --hub github.com/${{ inputs.fairground }} --base-repo "App" --org "${{ env.ORGNAME }}" --ref "${{ env.COMMITHASH }}" --integration-title "${{ env.PRTITLE }}" --fair-properties "$FAIRGROUND.xcconfig" --fairseal-issuer "${{ inputs.fairseal_issuer }}" --fairseal-key "${{ secrets.APP_FAIR_FAIRSEAL_KEY }}" --allow-name "${{ secrets.APP_FAIR_ALLOW_NAME }}" --deny-name "${{ secrets.APP_FAIR_DENY_NAME }}" --allow-from "${{ secrets.APP_FAIR_ALLOW_FROM }}" --deny-from "${{ secrets.APP_FAIR_DENY_FROM }}" --verbose
