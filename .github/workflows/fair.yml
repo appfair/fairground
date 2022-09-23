@@ -177,7 +177,7 @@ jobs:
 
       - name: "Resolve Swift Packages"
         run: |
-          swift package resolve
+          xcrun swift package resolve
           cp Package.resolved Sources/App/Resources/
 
       - name: "Install ${{ env.FAIRTOOL }}"
@@ -520,13 +520,13 @@ jobs:
           $FAIRTOOL fair validate --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project . --fair-properties "$FAIRGROUND.xcconfig" --allow-license "AGPL-3.0"
 
           xcrun swift package resolve
+          cat Package.resolved # useful for the log
+          cp Package.resolved Sources/App/Resources/ # embed in the app
+
           cp -a .build/checkouts Dependencies
           tar cvzf "staging/${{ env.FAIR_APP_ARTIFACT }}-source.tgz" --exclude='.git/' --exclude='.build/' --exclude='staging/' .
           rm -rf Dependencies
 
-          xcrun swift package resolve
-          cat Package.resolved # useful for the log
-          cp Package.resolved Sources/App/Resources/ # embed in the app
 
       - name: "Configure Deployment Platforms"
         id: platforms
