@@ -185,7 +185,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $FAIRTOOL app refresh
+          $FAIRTOOL app refresh --project .
           $FAIRTOOL fair validate --verbose --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project . --fair-properties "$FAIRGROUND.xcconfig" --allow-license "AGPL-3.0"
           $FAIRTOOL fair icon --org "${{ env.ORGNAME }}" --fair-properties $FAIRGROUND.xcconfig --accent-color Assets.xcassets/AccentColor.colorset/Contents.json --app-icon Assets.xcassets/AppIcon.appiconset/Contents.json
 
@@ -514,7 +514,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $FAIRTOOL app refresh
+          $FAIRTOOL app refresh --project ReleasePR
           #$FAIRTOOL fair validate --verbose --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project . --fair-properties "$FAIRGROUND.xcconfig" --allow-license "AGPL-3.0"
           $FAIRTOOL fair validate --base .  --project ReleasePR --hub github.com/${{ inputs.fairground }} --base-repo "App" --org "${{ env.ORGNAME }}" --ref "${{ env.COMMITHASH }}" --integration-title "${{ env.PRTITLE }}" --fair-properties "$FAIRGROUND.xcconfig" --fairseal-issuer "${{ inputs.fairseal_issuer }}" --fairseal-key "${{ secrets.APP_FAIR_FAIRSEAL_KEY }}" --allow-name "${{ secrets.APP_FAIR_ALLOW_NAME }}" --deny-name "${{ secrets.APP_FAIR_DENY_NAME }}" --allow-from "${{ secrets.APP_FAIR_ALLOW_FROM }}" --deny-from "${{ secrets.APP_FAIR_DENY_FROM }}" --verbose
           $FAIRTOOL fair icon --org "${{ env.ORGNAME }}" --fair-properties "$FAIRGROUND.xcconfig" --accent-color Assets.xcassets/AccentColor.colorset/Contents.json --app-icon Assets.xcassets/AppIcon.appiconset/Contents.json
