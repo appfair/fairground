@@ -204,6 +204,7 @@ jobs:
       - name: "Stage Release Metadata"
         # copy over the un-processed assets from the ReleasePR/
         run: |
+          mkdir -p staging/
           cp README.md staging/
           cp LICENSE.AGPL staging/
           cp LICENSE_EXCEPTION.FAIR staging/
@@ -754,7 +755,7 @@ jobs:
           #$FAIRTOOL app rebundle --export fastlane/metadata App.yml
 
           # Re-sign the validated ipa
-          mkdir staging/rebundled/
+          mkdir -p staging/rebundled/
           cd staging/rebundled/
 
           # Extract the untrusted ipa we downloaded for the fairseal
