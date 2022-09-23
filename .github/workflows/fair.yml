@@ -176,11 +176,6 @@ jobs:
           echo "::set-output name=macos::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme $APP_TARGET archive 2>/dev/null | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'macosx' > /dev/null && echo enabled || echo disabled)"
           echo "::set-output name=ios::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme $APP_TARGET archive 2>/dev/null | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'iphoneos' > /dev/null && echo enabled || echo disabled)"
 
-      - name: "Resolve Swift Packages"
-        run: |
-          xcrun swift package resolve
-          cp Package.resolved Sources/App/Resources/
-
       - name: "Install ${{ env.FAIRTOOL }}"
         run: |
           brew install fair-ground/tool/$FAIRTOOL
@@ -211,6 +206,11 @@ jobs:
           # create a pre-release if it doesn't already exist 
           gh release create "${GITHUB_REF#refs/tags/}" --prerelease --title "Release ${GITHUB_REF#refs/tags/}" --generate-notes || true
           mkdir staging/
+
+      - name: "Resolve Swift Packages"
+        run: |
+          xcrun swift package resolve
+          cp Package.resolved Sources/App/Resources/
 
       - name: "Test iOS App"
         # need to set up test scheme to make this work
