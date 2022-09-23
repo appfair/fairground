@@ -201,29 +201,6 @@ jobs:
           curl --location --fail -s "https://${{ env.ORGNAME }}.github.io/App" | grep "$FAIRGROUND_LAUNCHPAD""${{ env.ORGNAME }}"
           curl --location --fail -s "http://${{ env.ORGNAME }}.appfair.net" | grep "$FAIRGROUND_LAUNCHPAD""${{ env.ORGNAME }}"
 
-      - name: "Stage Release Metadata"
-        # copy over the un-processed assets from the ReleasePR/
-        run: |
-          mkdir -p staging/
-          cp README.md staging/
-          cp LICENSE.AGPL staging/
-          cp LICENSE_EXCEPTION.FAIR staging/
-          cp CONTRIBUTION.txt staging/
-
-          cp App.yml staging/
-          cp Package.resolved staging/
-          cp Info.plist staging/
-          cp sandbox-macos.entitlements staging/
-          cp sandbox-ios.entitlements staging/
-
-          cp Assets.xcassets/AppIcon.appiconset/appicon-iphone-60x60@3x.png staging/"${{ env.FAIR_APP_ARTIFACT }}.png"
-          cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.png staging/ || true
-          cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.jpg staging/ || true
-
-          ls -la staging/
-          # log the checksum for each of the staging elements
-          shasum -a 256 staging/*.*
-
       # Create a new release for this tag
       - name: "Create Release"
         if: startsWith(github.ref, 'refs/tags/')
@@ -233,6 +210,7 @@ jobs:
           echo "Creating release: ${GITHUB_REF#refs/tags/}"
           # create a pre-release if it doesn't already exist 
           gh release create "${GITHUB_REF#refs/tags/}" --prerelease --title "Release ${GITHUB_REF#refs/tags/}" --generate-notes || true
+          mkdir staging/
 
       - name: "Test iOS App"
         # need to set up test scheme to make this work
@@ -423,6 +401,28 @@ jobs:
         run: |
           gh release upload "${GITHUB_REF#refs/tags/}" -- "${{ env.FAIR_APP_ARTIFACT }}-macOS.zip"
 
+      - name: "Stage Release Metadata"
+        # copy over the un-processed assets from the ReleasePR/
+        run: |
+          cp README.md staging/
+          cp LICENSE.AGPL staging/
+          cp LICENSE_EXCEPTION.FAIR staging/
+          cp CONTRIBUTION.txt staging/
+
+          cp App.yml staging/
+          cp Package.resolved staging/
+          cp Info.plist staging/
+          cp sandbox-macos.entitlements staging/
+          cp sandbox-ios.entitlements staging/
+
+          cp Assets.xcassets/AppIcon.appiconset/appicon-iphone-60x60@3x.png staging/"${{ env.FAIR_APP_ARTIFACT }}.png"
+          cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.png staging/ || true
+          cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.jpg staging/ || true
+
+          ls -la staging/
+          # log the checksum for each of the staging elements
+          shasum -a 256 staging/*.*
+
       - name: "Upload Release Assets"
         if: startsWith(github.ref, 'refs/tags/')
         env:
@@ -598,7 +598,7 @@ jobs:
 
           echo "Generating fairseal for: $IPAURL"
 
-          mkdir -p staging/.artifact_stash/
+          mkdir staging/.artifact_stash/
           mv -f staging/*.zip staging/.artifact_stash/ || true # don't seal the macOS zip for iOS seal
 
           mkdir -p staging/untrusted/
@@ -847,7 +847,7 @@ jobs:
 
           echo "Generating fairseal for: $ZIPURL"
 
-          mkdir -p staging/.artifact_stash/
+          mkdir staging/.artifact_stash/
           mv -f staging/*.ipa staging/.artifact_stash/ || true # don't seal the ipa when sealing macOS
 
           mkdir -p staging/untrusted/
