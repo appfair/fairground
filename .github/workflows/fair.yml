@@ -171,30 +171,29 @@ jobs:
           swift package resolve
           cp Package.resolved Sources/App/Resources/
 
-      - name: "Install ${{ env.FAIRTOOL }}"
-        run: |
-          brew install fair-ground/tool/$FAIRTOOL
-          $FAIRTOOL version
-
       - name: "Check Version"
         id: get_semver_tag
         run: echo ::set-output name=semver_tag::$(xcodebuild -quiet -workspace ReleasePR/App.xcworkspace -showBuildSettings -json -scheme "${{ env.APP_TARGET }}" archive 2> /dev/null | jq -r '.[].buildSettings.MARKETING_VERSION')
 
-      - name: "Validate App: ${{ env.ORGNAME }} ${{ steps.get_semver_tag.outputs.semver_tag }}"
+      - name: "Validate Project with ${{ env.FAIRTOOL }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          brew install fair-ground/tool/$FAIRTOOL
+          $FAIRTOOL version
+          $FAIRTOOL app refresh
+          $FAIRTOOL fair validate --verbose --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project . --fair-properties "$FAIRGROUND.xcconfig" --allow-license "AGPL-3.0"
+          $FAIRTOOL fair icon --org "${{ env.ORGNAME }}" --fair-properties $FAIRGROUND.xcconfig --accent-color Assets.xcassets/AccentColor.colorset/Contents.json --app-icon Assets.xcassets/AppIcon.appiconset/Contents.json
+
+      - name: "Update App: ${{ env.ORGNAME }} ${{ steps.get_semver_tag.outputs.semver_tag }}"
+        run: |
           # needed to be able to ad-hoc codesign embedded frameworks
           plutil -replace 'com\.apple\.security\.cs\.disable-library-validation' -bool true sandbox-macos.entitlements
-          $FAIRTOOL fair validate --verbose --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project . --fair-properties "$FAIRGROUND.xcconfig" --allow-license "AGPL-3.0"
 
       # Verifies that pages are enabled for this repository
       - name: "Check Repository Page: https://${{ env.ORGNAME }}.github.io/App"
-        run: curl --location --fail -s "${{ env.ORGNAME }}.github.io/App" | grep "$FAIRGROUND_LAUNCHPAD""${{ env.ORGNAME }}"
-
-      - name: "Generate Icon"
         run: |
-          $FAIRTOOL fair icon --org "${{ env.ORGNAME }}" --fair-properties $FAIRGROUND.xcconfig --accent-color Assets.xcassets/AccentColor.colorset/Contents.json --app-icon Assets.xcassets/AppIcon.appiconset/Contents.json
+          curl --location --fail -s "${{ env.ORGNAME }}.github.io/App" | grep "$FAIRGROUND_LAUNCHPAD""${{ env.ORGNAME }}"
 
       # Create a new release for this tag
       - name: "Create Release"
@@ -475,28 +474,21 @@ jobs:
         id: get_semver_tag
         run: echo ::set-output name=semver_tag::$(xcodebuild -quiet -workspace ReleasePR/App.xcworkspace -showBuildSettings -json -scheme "${{ env.APP_TARGET }}" archive 2> /dev/null | jq -r '.[].buildSettings.MARKETING_VERSION')
 
-      - name: "Validate App: ${{ env.PRTITLE }}"
+      - name: "Validate Project with ${{ env.FAIRTOOL }}"
         env:
-          GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          brew install fair-ground/tool/$FAIRTOOL
+          $FAIRTOOL version
+          $FAIRTOOL app refresh
+          #$FAIRTOOL fair validate --verbose --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project . --fair-properties "$FAIRGROUND.xcconfig" --allow-license "AGPL-3.0"
+          $FAIRTOOL fair validate --base .  --project ReleasePR --hub github.com/${{ inputs.fairground }} --base-repo "App" --org "${{ env.ORGNAME }}" --ref "${{ env.COMMITHASH }}" --integration-title "${{ env.PRTITLE }}" --fair-properties "$FAIRGROUND.xcconfig" --fairseal-issuer "${{ inputs.fairseal_issuer }}" --fairseal-key "${{ secrets.APP_FAIR_FAIRSEAL_KEY }}" --allow-name "${{ secrets.APP_FAIR_ALLOW_NAME }}" --deny-name "${{ secrets.APP_FAIR_DENY_NAME }}" --allow-from "${{ secrets.APP_FAIR_ALLOW_FROM }}" --deny-from "${{ secrets.APP_FAIR_DENY_FROM }}" --verbose
+          $FAIRTOOL fair icon --org "${{ env.ORGNAME }}" --fair-properties "$FAIRGROUND.xcconfig" --accent-color Assets.xcassets/AccentColor.colorset/Contents.json --app-icon Assets.xcassets/AppIcon.appiconset/Contents.json
+
+      - name: "Update App: ${{ env.ORGNAME }} ${{ steps.get_semver_tag.outputs.semver_tag }}"
         run: |
           # needed to be able to ad-hoc codesign embedded frameworks
           plutil -replace 'com\.apple\.security\.cs\.disable-library-validation' -bool true ReleasePR/sandbox-macos.entitlements
-          $FAIRTOOL fair validate \
-            --base . \
-            --project ReleasePR \
-            --hub github.com/${{ inputs.fairground }} \
-            --base-repo "App" \
-            --org "${{ env.ORGNAME }}" \
-            --ref "${{ env.COMMITHASH }}" \
-            --integration-title "${{ env.PRTITLE }}" \
-            --fair-properties "$FAIRGROUND.xcconfig" \
-            --fairseal-issuer "${{ inputs.fairseal_issuer }}" \
-            --fairseal-key "${{ secrets.APP_FAIR_FAIRSEAL_KEY }}" \
-            --allow-name "${{ secrets.APP_FAIR_ALLOW_NAME }}" \
-            --deny-name "${{ secrets.APP_FAIR_DENY_NAME }}" \
-            --allow-from "${{ secrets.APP_FAIR_ALLOW_FROM }}" \
-            --deny-from "${{ secrets.APP_FAIR_DENY_FROM }}" \
-            --verbose
 
       - name: "Integrate PR"
         env:
@@ -535,10 +527,6 @@ jobs:
         run: |
           echo "::set-output name=macos::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme $APP_TARGET archive 2>/dev/null | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'macosx' > /dev/null && echo enabled || echo disabled)"
           echo "::set-output name=ios::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme $APP_TARGET archive 2>/dev/null | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'iphoneos' > /dev/null && echo enabled || echo disabled)"
-
-      - name: "Generate Icon"
-        run: |
-          $FAIRTOOL fair icon --org "${{ env.ORGNAME }}" --fair-properties "$FAIRGROUND.xcconfig" --accent-color Assets.xcassets/AccentColor.colorset/Contents.json --app-icon Assets.xcassets/AppIcon.appiconset/Contents.json
 
       - name: "Stage Release Metadata"
         # copy over the un-processed assets from the ReleasePR/
