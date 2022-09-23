@@ -701,11 +701,11 @@ jobs:
               ipa: "staging/rebundled/${FAIR_APP_ARTIFACT}-iOS.ipa",
               skip_submission: false,
 
-              #skip_waiting_for_build_processing: false,
-              #distribute_external: true,
+              skip_waiting_for_build_processing: false,
+              distribute_external: true,
 
-              skip_waiting_for_build_processing: true,
-              distribute_external: false,
+              #skip_waiting_for_build_processing: true,
+              #distribute_external: false,
 
               changelog: "Bug fixes and performance improvements.",
               groups: [
