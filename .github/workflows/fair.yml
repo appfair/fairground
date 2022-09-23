@@ -160,6 +160,15 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.ref }}
 
+      - name: "Check Version"
+        id: get_semver_tag
+        run: echo ::set-output name=semver_tag::$(xcodebuild -quiet -workspace ReleasePR/App.xcworkspace -showBuildSettings -json -scheme "${{ env.APP_TARGET }}" archive 2> /dev/null | jq -r '.[].buildSettings.MARKETING_VERSION')
+
+      - name: "Prepare App: ${{ env.ORGNAME }} ${{ steps.get_semver_tag.outputs.semver_tag }}"
+        run: |
+          # needed to be able to ad-hoc codesign embedded frameworks
+          plutil -replace 'com\.apple\.security\.cs\.disable-library-validation' -bool true sandbox-macos.entitlements
+
       - name: "Configure Deployment Platforms"
         id: platforms
         run: |
@@ -171,10 +180,6 @@ jobs:
           swift package resolve
           cp Package.resolved Sources/App/Resources/
 
-      - name: "Check Version"
-        id: get_semver_tag
-        run: echo ::set-output name=semver_tag::$(xcodebuild -quiet -workspace ReleasePR/App.xcworkspace -showBuildSettings -json -scheme "${{ env.APP_TARGET }}" archive 2> /dev/null | jq -r '.[].buildSettings.MARKETING_VERSION')
-
       - name: "Validate Project with ${{ env.FAIRTOOL }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -185,15 +190,12 @@ jobs:
           $FAIRTOOL fair validate --verbose --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project . --fair-properties "$FAIRGROUND.xcconfig" --allow-license "AGPL-3.0"
           $FAIRTOOL fair icon --org "${{ env.ORGNAME }}" --fair-properties $FAIRGROUND.xcconfig --accent-color Assets.xcassets/AccentColor.colorset/Contents.json --app-icon Assets.xcassets/AppIcon.appiconset/Contents.json
 
-      - name: "Update App: ${{ env.ORGNAME }} ${{ steps.get_semver_tag.outputs.semver_tag }}"
+      # Verifies that the project URLs are configured correctly
+      - name: "Verify Project http://${{ env.ORGNAME }}.appfair.net"
         run: |
-          # needed to be able to ad-hoc codesign embedded frameworks
-          plutil -replace 'com\.apple\.security\.cs\.disable-library-validation' -bool true sandbox-macos.entitlements
-
-      # Verifies that pages are enabled for this repository
-      - name: "Check Repository Page: https://${{ env.ORGNAME }}.github.io/App"
-        run: |
-          curl --location --fail -s "${{ env.ORGNAME }}.github.io/App" | grep "$FAIRGROUND_LAUNCHPAD""${{ env.ORGNAME }}"
+          # check both the App.github.io and App.appfair.net URLs
+          curl --location --fail -s "https://${{ env.ORGNAME }}.github.io/App" | grep "$FAIRGROUND_LAUNCHPAD""${{ env.ORGNAME }}"
+          curl --location --fail -s "http://${{ env.ORGNAME }}.appfair.net" | grep "$FAIRGROUND_LAUNCHPAD""${{ env.ORGNAME }}"
 
       # Create a new release for this tag
       - name: "Create Release"
@@ -448,6 +450,13 @@ jobs:
           echo "PRODUCT_NAME=$(echo ${{ env.ORGNAME }} | tr '-' ' ')" >> $GITHUB_ENV
           echo "BUNDLE_ID=app.$(echo ${{ env.ORGNAME }})" >> $GITHUB_ENV
 
+      # Verifies that the project URLs are configured correctly
+      - name: "Verify Project http://${{ env.ORGNAME }}.appfair.net"
+        run: |
+          # check both the App.github.io and App.appfair.net URLs
+          curl --location --fail -s "https://${{ env.ORGNAME }}.github.io/App" | grep "$FAIRGROUND_LAUNCHPAD""${{ env.ORGNAME }}"
+          curl --location --fail -s "http://${{ env.ORGNAME }}.appfair.net" | grep "$FAIRGROUND_LAUNCHPAD""${{ env.ORGNAME }}"
+
       - name: "Checkout Base Fairground"
         uses: actions/checkout@v2
 
@@ -517,10 +526,6 @@ jobs:
           xcrun swift package resolve
           cat Package.resolved # useful for the log
           cp Package.resolved Sources/App/Resources/ # embed in the app
-
-      # Verifies that pages are enabled for the forked repository
-      - name: "Check Repository Page: https://${{ env.ORGNAME }}.github.io/App"
-        run: curl --location --fail -s "${{ env.ORGNAME }}.github.io/App" | grep "$FAIRGROUND_LAUNCHPAD""${{ env.ORGNAME }}"
 
       - name: "Configure Deployment Platforms"
         id: platforms
