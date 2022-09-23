@@ -201,6 +201,28 @@ jobs:
           curl --location --fail -s "https://${{ env.ORGNAME }}.github.io/App" | grep "$FAIRGROUND_LAUNCHPAD""${{ env.ORGNAME }}"
           curl --location --fail -s "http://${{ env.ORGNAME }}.appfair.net" | grep "$FAIRGROUND_LAUNCHPAD""${{ env.ORGNAME }}"
 
+      - name: "Stage Release Metadata"
+        # copy over the un-processed assets from the ReleasePR/
+        run: |
+          cp README.md staging/
+          cp LICENSE.AGPL staging/
+          cp LICENSE_EXCEPTION.FAIR staging/
+          cp CONTRIBUTION.txt staging/
+
+          cp App.yml staging/
+          cp Package.resolved staging/
+          cp Info.plist staging/
+          cp sandbox-macos.entitlements staging/
+          cp sandbox-ios.entitlements staging/
+
+          cp Assets.xcassets/AppIcon.appiconset/appicon-iphone-60x60@3x.png staging/"${{ env.FAIR_APP_ARTIFACT }}.png"
+          cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.png staging/ || true
+          cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.jpg staging/ || true
+
+          ls -la staging/
+          # log the checksum for each of the staging elements
+          shasum -a 256 staging/*.*
+
       # Create a new release for this tag
       - name: "Create Release"
         if: startsWith(github.ref, 'refs/tags/')
@@ -534,28 +556,6 @@ jobs:
         run: |
           echo "::set-output name=macos::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme $APP_TARGET archive 2>/dev/null | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'macosx' > /dev/null && echo enabled || echo disabled)"
           echo "::set-output name=ios::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme $APP_TARGET archive 2>/dev/null | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'iphoneos' > /dev/null && echo enabled || echo disabled)"
-
-      - name: "Stage Release Metadata"
-        # copy over the un-processed assets from the ReleasePR/
-        run: |
-          cp README.md staging/
-          cp LICENSE.AGPL staging/
-          cp LICENSE_EXCEPTION.FAIR staging/
-          cp CONTRIBUTION.txt staging/
-
-          cp App.yml staging/
-          cp Package.resolved staging/
-          cp Info.plist staging/
-          cp sandbox-macos.entitlements staging/
-          cp sandbox-ios.entitlements staging/
-
-          cp Assets.xcassets/AppIcon.appiconset/appicon-iphone-60x60@3x.png staging/"${{ env.FAIR_APP_ARTIFACT }}.png"
-          cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.png staging/ || true
-          cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.jpg staging/ || true
-
-          ls -la staging/
-          # log the checksum for each of the staging elements
-          shasum -a 256 staging/*.*
 
       - name: "Check PreFlight Eligibility"
         id: preflight
