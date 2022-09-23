@@ -421,7 +421,8 @@ jobs:
 
           ls -la staging/
           # log the checksum for each of the staging elements
-          shasum -a 256 staging/*.*
+          # or true is there is case of directories
+          shasum -a 256 staging/*.* || true
 
       - name: "Upload Release Assets"
         if: startsWith(github.ref, 'refs/tags/')
