@@ -281,9 +281,6 @@ jobs:
           # create the zip file
           ditto -c -k --sequesterRsrc --keepParent "staging/${PRODUCT_NAME}.app" "${FAIR_APP_ARTIFACT}-macOS.zip"
 
-          # clean up the app
-          rm -r "staging/${PRODUCT_NAME}.app"
-
       # Create a new release for this tag
       - name: "Create Release"
         if: startsWith(github.ref, 'refs/tags/')
@@ -321,7 +318,7 @@ jobs:
           echo "Uploading release assets: ${GITHUB_REF#refs/tags/}"
 
           # upload staging assets to the existing GitHub release
-          gh release upload "${GITHUB_REF#refs/tags/}" -- staging/*.*
+          gh release upload "${GITHUB_REF#refs/tags/}" -- $(find staging/ -maxdepth 1 -type f)
 
       - name: "Upload iOS Release"
         if: inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' && startsWith(github.ref, 'refs/tags/')
