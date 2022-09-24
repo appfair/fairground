@@ -196,17 +196,6 @@ jobs:
           curl --location --fail -s "https://${{ env.ORGNAME }}.github.io/App" | grep "$FAIRGROUND_LAUNCHPAD""${{ env.ORGNAME }}"
           curl --location --fail -s "http://${{ env.ORGNAME }}.appfair.net" | grep "$FAIRGROUND_LAUNCHPAD""${{ env.ORGNAME }}"
 
-      # Create a new release for this tag
-      - name: "Create Release"
-        if: startsWith(github.ref, 'refs/tags/')
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "Creating release: ${GITHUB_REF#refs/tags/}"
-          # create a pre-release if it doesn't already exist 
-          gh release create "${GITHUB_REF#refs/tags/}" --prerelease --title "Release ${GITHUB_REF#refs/tags/}" --generate-notes || true
-          mkdir staging/
-
       - name: "Resolve Swift Packages"
         run: |
           xcrun swift package resolve
@@ -239,15 +228,7 @@ jobs:
             FAIRAPP_PRODUCT_NAME="${PRODUCT_NAME}"
 
           cp -a "staging/.${{ env.FAIR_APP_ARTIFACT }}-iOS.xcarchive/Products/Applications" "staging/Payload"
-          rm staging/Payload/AppIcon* || true # fix build difference
           ditto -c -k --sequesterRsrc --keepParent "staging/Payload" "${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa"
-
-      - name: "Upload iOS Release"
-        if: inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' && startsWith(github.ref, 'refs/tags/')
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release upload "${GITHUB_REF#refs/tags/}" -- "${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa"
 
       - name: "Test macOS App"
         if: inputs.target_macos == true && steps.platforms.outputs.macos == 'enabled' && startsWith(github.ref, 'refs/tags/') == false
@@ -293,6 +274,69 @@ jobs:
 
           # create the zip file
           ditto -c -k --sequesterRsrc --keepParent "staging/${PRODUCT_NAME}.app" "${{ env.FAIR_APP_ARTIFACT }}-macOS.zip"
+
+
+      # Create a new release for this tag
+      - name: "Create Release"
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Creating release: ${GITHUB_REF#refs/tags/}"
+          # create a pre-release if it doesn't already exist 
+          gh release create "${GITHUB_REF#refs/tags/}" --prerelease --title "Release ${GITHUB_REF#refs/tags/}" --generate-notes || true
+          mkdir staging/
+
+      - name: "Stage Release Metadata"
+        # copy over the un-processed assets from the ReleasePR/
+        run: |
+          cp README.md staging/
+          cp LICENSE.AGPL staging/
+          cp LICENSE_EXCEPTION.FAIR staging/
+          cp CONTRIBUTION.txt staging/
+
+          cp App.yml staging/
+          cp Package.resolved staging/
+          cp Info.plist staging/
+          cp sandbox-macos.entitlements staging/
+          cp sandbox-ios.entitlements staging/
+
+          cp Assets.xcassets/AppIcon.appiconset/appicon-iphone-60x60@3x.png staging/"${{ env.FAIR_APP_ARTIFACT }}.png"
+          cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.png staging/ || true
+          cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.jpg staging/ || true
+
+          ls -la staging/
+          # log the checksum for each of the staging elements
+          # or true is there is case of directories
+          shasum -a 256 staging/*.* || true
+
+      - name: "Upload Release Assets"
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Extract the Info.plist from the archives themselves, since they contain
+        # the same post-processed metadata that the app will use.
+        # Convert plists to XML for easier parsing.
+        run: |
+          cp Assets.xcassets/AppIcon.appiconset/appicon-iphone-60x60@3x.png staging/"${{ env.FAIR_APP_ARTIFACT }}.png"
+          cp App.yml README.md LICENSE.AGPL LICENSE_EXCEPTION.FAIR Info.plist sandbox-macos.entitlements sandbox-ios.entitlements Package.resolved staging/
+          cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.png staging/ || true
+          cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.jpg staging/ || true
+          ls -la staging/
+
+          # log the checksum for each of the staging elements
+          openssl sha256 staging/*.*
+          echo "Uploading release assets: ${GITHUB_REF#refs/tags/}"
+
+          # upload staging assets to the existing GitHub release
+          gh release upload "${GITHUB_REF#refs/tags/}" -- staging/*.*
+
+      - name: "Upload iOS Release"
+        if: inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' && startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${GITHUB_REF#refs/tags/}" -- "${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa"
 
       # Notarization is not required for the App Fair, but a developer
       # can opt to notarize their own build which will allow them to 
@@ -348,55 +392,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload "${GITHUB_REF#refs/tags/}" -- "${{ env.FAIR_APP_ARTIFACT }}-macOS.zip"
-
-      - name: "Stage Release Metadata"
-        # copy over the un-processed assets from the ReleasePR/
-        run: |
-          cp README.md staging/
-          cp LICENSE.AGPL staging/
-          cp LICENSE_EXCEPTION.FAIR staging/
-          cp CONTRIBUTION.txt staging/
-
-          cp App.yml staging/
-          cp Package.resolved staging/
-          cp Info.plist staging/
-          cp sandbox-macos.entitlements staging/
-          cp sandbox-ios.entitlements staging/
-
-          cp Assets.xcassets/AppIcon.appiconset/appicon-iphone-60x60@3x.png staging/"${{ env.FAIR_APP_ARTIFACT }}.png"
-          cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.png staging/ || true
-          cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.jpg staging/ || true
-
-          ls -la staging/
-          # log the checksum for each of the staging elements
-          # or true is there is case of directories
-          shasum -a 256 staging/*.* || true
-
-      - name: "Upload Release Assets"
-        if: startsWith(github.ref, 'refs/tags/')
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        # Extract the Info.plist from the archives themselves, since they contain
-        # the same post-processed metadata that the app will use.
-        # Convert plists to XML for easier parsing.
-        run: |
-          cp Assets.xcassets/AppIcon.appiconset/appicon-iphone-60x60@3x.png staging/"${{ env.FAIR_APP_ARTIFACT }}.png"
-          cp App.yml README.md LICENSE.AGPL LICENSE_EXCEPTION.FAIR Info.plist sandbox-macos.entitlements sandbox-ios.entitlements Package.resolved staging/
-          cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.png staging/ || true
-          cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.jpg staging/ || true
-          ls -la staging/
-
-          rm -rf staging/*.app # need to cleanup app
-          # find staging/ -type d -maxdepth 1 -exec rm -rf {} \; # remove directories from staging
-
-          # log the checksum for each of the staging elements
-          openssl sha256 staging/*.*
-          echo "Uploading release assets: ${GITHUB_REF#refs/tags/}"
-
-          # upload staging assets to the existing GitHub release
-          gh release upload "${GITHUB_REF#refs/tags/}" -- staging/*.*
-
-
 
 
   # The Integrate-Release phases run in the trusted base fairground.
