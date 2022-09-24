@@ -700,6 +700,9 @@ jobs:
           SUPPORTED_PLATFORMS: iphoneos
           CI: true
         run: |
+          # already installed on CI, but this will update any hotfixes
+          gem install fastlane
+
           # acquire embedded.mobileprovision
           fastlane provision --verbose
 
@@ -733,9 +736,6 @@ jobs:
           rm -rf Payload/
 
           cd -
-
-          # already installed on CI, but this will update any hotfixes
-          gem install fastlane
 
           fastlane beta --verbose
 
