@@ -34,11 +34,14 @@ env:
   APP_TARGET: "AppFairApp"
   PREFLIGHT_BUNDLE_PREFIX: "org.appfair"
   FAIRGROUND_LAUNCHPAD: "https://appfair.app/fair?app="
+
   HUB_REPO: "github.com"
   HUB_PAGE: "github.io"
-  #FAIRTOOL: "fairtool"
+
+  FAIRTOOL: "fairtool"
   # fairtool-head will build from source, which adds a few minutes
-  FAIRTOOL: "fairtool-head"
+  #FAIRTOOL: "fairtool-head"
+
   DEVELOPER_DIR: /Applications/Xcode_14.0.1.app/Contents/Developer
 
 on:
@@ -186,7 +189,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $FAIRTOOL app refresh --project .
-          $FAIRTOOL fair validate --verbose --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project . --fair-properties "$FAIRGROUND.xcconfig" --allow-license "AGPL-3.0"
+          $FAIRTOOL fair validate --verbose --hub "${HUB_REPO}/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project . --fair-properties "$FAIRGROUND.xcconfig" --allow-license "AGPL-3.0"
           $FAIRTOOL fair icon --org "${{ env.ORGNAME }}" --fair-properties $FAIRGROUND.xcconfig --accent-color Assets.xcassets/AccentColor.colorset/Contents.json --app-icon Assets.xcassets/AppIcon.appiconset/Contents.json
           mkdir staging/
 
@@ -194,8 +197,8 @@ jobs:
       - name: "Verify Project http://${{ env.ORGNAME }}.appfair.net"
         run: |
           # check both the App.github.io and App.appfair.net URLs
-          curl --location --fail -s "https://${{ env.ORGNAME }}.github.io/App" | grep "$FAIRGROUND_LAUNCHPAD""${{ env.ORGNAME }}"
-          curl --location --fail -s "http://${{ env.ORGNAME }}.appfair.net" | grep "$FAIRGROUND_LAUNCHPAD""${{ env.ORGNAME }}"
+          curl --location --fail -s "https://${ORGNAME}.${HUB_PAGE}/App" | grep "$FAIRGROUND_LAUNCHPAD""${ORGNAME}"
+          curl --location --fail -s "http://${ORGNAME}.appfair.net" | grep "$FAIRGROUND_LAUNCHPAD""${ORGNAME}"
 
       - name: "Resolve Swift Packages"
         run: |
@@ -287,29 +290,6 @@ jobs:
           # create a pre-release if it doesn't already exist 
           gh release create "${GITHUB_REF#refs/tags/}" --prerelease --title "Release ${GITHUB_REF#refs/tags/}" --generate-notes || true
 
-      - name: "Stage Release Metadata"
-        # copy over the un-processed assets from the ReleasePR/
-        run: |
-          cp README.md staging/
-          cp LICENSE.AGPL staging/
-          cp LICENSE_EXCEPTION.FAIR staging/
-          cp CONTRIBUTION.txt staging/
-
-          cp App.yml staging/
-          cp Package.resolved staging/
-          cp Info.plist staging/
-          cp sandbox-macos.entitlements staging/
-          cp sandbox-ios.entitlements staging/
-
-          cp Assets.xcassets/AppIcon.appiconset/appicon-iphone-60x60@3x.png staging/"${{ env.FAIR_APP_ARTIFACT }}.png"
-          cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.png staging/ || true
-          cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.jpg staging/ || true
-
-          ls -la staging/
-          # log the checksum for each of the staging elements
-          # or true is there is case of directories
-          shasum -a 256 staging/*.* || true
-
       - name: "Upload Release Assets"
         if: startsWith(github.ref, 'refs/tags/')
         env:
@@ -319,7 +299,15 @@ jobs:
         # Convert plists to XML for easier parsing.
         run: |
           cp Assets.xcassets/AppIcon.appiconset/appicon-iphone-60x60@3x.png staging/"${{ env.FAIR_APP_ARTIFACT }}.png"
-          cp App.yml README.md LICENSE.AGPL LICENSE_EXCEPTION.FAIR Info.plist sandbox-macos.entitlements sandbox-ios.entitlements Package.resolved staging/
+          cp App.yml staging/
+          cp README.md staging/
+          cp LICENSE.AGPL staging/
+          cp LICENSE_EXCEPTION.FAIR staging/
+          cp Info.plist staging/
+          cp sandbox-macos.entitlements staging/
+          cp sandbox-ios.entitlements staging/
+          cp Package.resolved staging/
+
           cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.png staging/ || true
           cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.jpg staging/ || true
           ls -la staging/
@@ -425,7 +413,7 @@ jobs:
       - name: "Verify Project http://${{ env.ORGNAME }}.appfair.net"
         run: |
           # check both the App.github.io and App.appfair.net URLs
-          curl --location --fail -s "https://${{ env.ORGNAME }}.github.io/App" | grep "$FAIRGROUND_LAUNCHPAD""${{ env.ORGNAME }}"
+          curl --location --fail -s "https://${{ env.ORGNAME }}.${HUB_PAGE}/App" | grep "$FAIRGROUND_LAUNCHPAD""${{ env.ORGNAME }}"
           curl --location --fail -s "http://${{ env.ORGNAME }}.appfair.net" | grep "$FAIRGROUND_LAUNCHPAD""${{ env.ORGNAME }}"
 
       - name: "Checkout Base Fairground"
@@ -459,8 +447,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $FAIRTOOL app refresh --project ReleasePR
-          #$FAIRTOOL fair validate --verbose --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project . --fair-properties "$FAIRGROUND.xcconfig" --allow-license "AGPL-3.0"
-          $FAIRTOOL fair validate --base .  --project ReleasePR --hub github.com/${{ inputs.fairground }} --base-repo "App" --org "${{ env.ORGNAME }}" --ref "${{ env.COMMITHASH }}" --integration-title "${{ env.PRTITLE }}" --fair-properties "$FAIRGROUND.xcconfig" --fairseal-issuer "${{ inputs.fairseal_issuer }}" --fairseal-key "${{ secrets.APP_FAIR_FAIRSEAL_KEY }}" --allow-name "${{ secrets.APP_FAIR_ALLOW_NAME }}" --deny-name "${{ secrets.APP_FAIR_DENY_NAME }}" --allow-from "${{ secrets.APP_FAIR_ALLOW_FROM }}" --deny-from "${{ secrets.APP_FAIR_DENY_FROM }}" --verbose
+          #$FAIRTOOL fair validate --verbose --hub "${HUB_REPO}/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project . --fair-properties "$FAIRGROUND.xcconfig" --allow-license "AGPL-3.0"
+          $FAIRTOOL fair validate --base .  --project ReleasePR --hub "${HUB_REPO}/${{ inputs.fairground }}" --base-repo "App" --org "${{ env.ORGNAME }}" --ref "${{ env.COMMITHASH }}" --integration-title "${{ env.PRTITLE }}" --fair-properties "$FAIRGROUND.xcconfig" --fairseal-issuer "${{ inputs.fairseal_issuer }}" --fairseal-key "${{ secrets.APP_FAIR_FAIRSEAL_KEY }}" --allow-name "${{ secrets.APP_FAIR_ALLOW_NAME }}" --deny-name "${{ secrets.APP_FAIR_DENY_NAME }}" --allow-from "${{ secrets.APP_FAIR_ALLOW_FROM }}" --deny-from "${{ secrets.APP_FAIR_DENY_FROM }}" --verbose
           $FAIRTOOL fair icon --org "${{ env.ORGNAME }}" --fair-properties "$FAIRGROUND.xcconfig" --accent-color Assets.xcassets/AccentColor.colorset/Contents.json --app-icon Assets.xcassets/AppIcon.appiconset/Contents.json
           mkdir staging/
 
@@ -473,14 +461,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
         run: |
-          $FAIRTOOL fair merge --verbose --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project ReleasePR --fair-properties "$FAIRGROUND.xcconfig" --output .
+          $FAIRTOOL fair merge --verbose --hub "${HUB_REPO}/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project ReleasePR --fair-properties "$FAIRGROUND.xcconfig" --output .
 
           file Assets.xcassets/AppIcon.appiconset/*.*
 
           # needed to be able to ad-hoc codesign embedded frameworks
           plutil -replace 'com\.apple\.security\.cs\.disable-library-validation' -bool true sandbox-macos.entitlements
 
-          $FAIRTOOL fair validate --hub "github.com/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project . --fair-properties "$FAIRGROUND.xcconfig" --allow-license "AGPL-3.0"
+          $FAIRTOOL fair validate --hub "${HUB_REPO}/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project . --fair-properties "$FAIRGROUND.xcconfig" --allow-license "AGPL-3.0"
 
           xcrun swift package resolve
           cat Package.resolved # useful for the log
@@ -496,6 +484,30 @@ jobs:
         run: |
           echo "::set-output name=macos::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme $APP_TARGET archive 2>/dev/null | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'macosx' > /dev/null && echo enabled || echo disabled)"
           echo "::set-output name=ios::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme $APP_TARGET archive 2>/dev/null | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'iphoneos' > /dev/null && echo enabled || echo disabled)"
+
+      - name: "Stage Release Metadata"
+        # copy over the un-processed assets from the ReleasePR/
+        run: |
+          cp README.md staging/
+          cp LICENSE.AGPL staging/
+          cp LICENSE_EXCEPTION.FAIR staging/
+          cp CONTRIBUTION.txt staging/
+
+          cp App.yml staging/
+          cp Package.resolved staging/
+          cp Info.plist staging/
+          cp sandbox-macos.entitlements staging/
+          cp sandbox-ios.entitlements staging/
+
+          cp Assets.xcassets/AppIcon.appiconset/appicon-iphone-60x60@3x.png staging/"${{ env.FAIR_APP_ARTIFACT }}.png"
+          cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.png staging/ || true
+          cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.jpg staging/ || true
+
+          ls -la staging/
+          # log the checksum for each of the staging elements
+          # or true is there is case of directories
+          shasum -a 256 staging/*.*
+
 
       - name: "Check PreFlight Eligibility"
         id: preflight
@@ -533,7 +545,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
         run: |
           # build the URL for the GitHub download artifact
-          IPAURL="https://github.com/${{ env.ORGNAME }}/App/releases/download/${{ steps.get_semver_tag.outputs.semver_tag }}/${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa" 
+          IPAURL="https://${HUB_REPO}/${{ env.ORGNAME }}/App/releases/download/${{ steps.get_semver_tag.outputs.semver_tag }}/${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa" 
 
           echo "Generating fairseal for: $IPAURL"
 
@@ -544,7 +556,7 @@ jobs:
 
           $FAIRTOOL fair fairseal \
             --verbose \
-            --hub "github.com/${{ inputs.fairground }}" \
+            --hub "${HUB_REPO}/${{ inputs.fairground }}" \
             --base-repo "App" \
             --token "${{ secrets.APP_FAIR_BOT_TOKEN }}" \
             --org "${{ env.ORGNAME }}" \
@@ -662,8 +674,8 @@ jobs:
           mkdir -p fastlane/metadata/
 
           # set some default review metadata
-          echo "https://github.com/${ORGNAME}/App/discussions" > fastlane/metadata/support_url.txt
-          echo "https://${ORGNAME}.github.io/App" > fastlane/metadata/marketing_url.txt
+          echo "https://${HUB_REPO}/${ORGNAME}/App/discussions" > fastlane/metadata/support_url.txt
+          echo "https://${ORGNAME}.${HUB_PAGE}/App" > fastlane/metadata/marketing_url.txt
 
           #mkdir -p fastlane/metadata/review_information
           #echo "App" > fastlane/metadata/review_information/first_name.txt
@@ -782,14 +794,15 @@ jobs:
 
         run: |
           # build the URL for the GitHub download artifact
-          ZIPURL="https://github.com/${ORGNAME}/App/releases/download/${{ steps.get_semver_tag.outputs.semver_tag }}/${FAIR_APP_ARTIFACT}-macOS.zip" 
+          ZIPURL="https://${HUB_REPO}/${ORGNAME}/App/releases/download/${{ steps.get_semver_tag.outputs.semver_tag }}/${FAIR_APP_ARTIFACT}-macOS.zip" 
 
           echo "Generating fairseal for: $ZIPURL"
 
+          mkdir staging/untrusted/
           mkdir staging/.artifact_stash/
+
           mv -f staging/*.ipa staging/.artifact_stash/ || true # don't seal the ipa when sealing macOS
 
-          mkdir -p staging/untrusted/
 
           # if the seals match, we indicate success by publishing
           # the SHA256 for the release's pull request;
@@ -798,7 +811,7 @@ jobs:
           # artifact that was created in the trusted environment
           $FAIRTOOL fair fairseal \
             --verbose \
-            --hub "github.com/${{ inputs.fairground }}" \
+            --hub "${HUB_REPO}/${{ inputs.fairground }}" \
             --base-repo "App" \
             --token "${{ secrets.APP_FAIR_BOT_TOKEN }}" \
             --org "${ORGNAME}" \
@@ -828,7 +841,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
         run: |
-          gh workflow --repo "${{ inputs.fairground }}/${{ inputs.fairground }}.github.io" run "catalog.yml"
+          gh workflow --repo "${{ inputs.fairground }}/${{ inputs.fairground }}.${HUB_PAGE}" run "catalog.yml"
 
       - name: "Upload Build Artifacts"
         # upload the trusted artifacts for each build for reproducible-builds
