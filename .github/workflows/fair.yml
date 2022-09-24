@@ -801,8 +801,8 @@ jobs:
 
           echo "Generating fairseal for: $ZIPURL"
 
-          mkdir staging/untrusted/
-          mkdir staging/.artifact_stash/
+          mkdir -p staging/untrusted/
+          mkdir -p staging/.artifact_stash/
 
           mv -f staging/*.ipa staging/.artifact_stash/ || true # don't seal the ipa when sealing macOS
 
