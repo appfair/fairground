@@ -279,6 +279,8 @@ jobs:
           # create the zip file
           ditto -c -k --sequesterRsrc --keepParent "staging/${PRODUCT_NAME}.app" "${{ env.FAIR_APP_ARTIFACT }}-macOS.zip"
 
+          # clean up the app
+          rm -r "staging/${PRODUCT_NAME}.app"
 
       # Create a new release for this tag
       - name: "Create Release"
@@ -446,10 +448,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $FAIRTOOL app refresh --project ReleasePR
-          #$FAIRTOOL fair validate --verbose --hub "${HUB_REPO}/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project . --fair-properties "$FAIRGROUND.xcconfig" --allow-license "AGPL-3.0"
           $FAIRTOOL fair validate --base .  --project ReleasePR --hub "${HUB_REPO}/${{ inputs.fairground }}" --base-repo "App" --org "${{ env.ORGNAME }}" --ref "${{ env.COMMITHASH }}" --integration-title "${{ env.PRTITLE }}" --fair-properties "$FAIRGROUND.xcconfig" --fairseal-issuer "${{ inputs.fairseal_issuer }}" --fairseal-key "${{ secrets.APP_FAIR_FAIRSEAL_KEY }}" --allow-name "${{ secrets.APP_FAIR_ALLOW_NAME }}" --deny-name "${{ secrets.APP_FAIR_DENY_NAME }}" --allow-from "${{ secrets.APP_FAIR_ALLOW_FROM }}" --deny-from "${{ secrets.APP_FAIR_DENY_FROM }}" --verbose
-          $FAIRTOOL fair icon --org "${{ env.ORGNAME }}" --fair-properties "$FAIRGROUND.xcconfig" --accent-color Assets.xcassets/AccentColor.colorset/Contents.json --app-icon Assets.xcassets/AppIcon.appiconset/Contents.json
+
           mkdir staging/
 
       - name: "Update App: ${{ env.ORGNAME }}"
@@ -478,6 +478,8 @@ jobs:
           tar cvzf "staging/${{ env.FAIR_APP_ARTIFACT }}-source.tgz" --exclude='.git/' --exclude='.build/' --exclude='staging/' .
           rm -rf Dependencies
 
+          $FAIRTOOL app refresh --project ReleasePR
+          $FAIRTOOL fair icon --org "${{ env.ORGNAME }}" --fair-properties "$FAIRGROUND.xcconfig" --accent-color Assets.xcassets/AccentColor.colorset/Contents.json --app-icon Assets.xcassets/AppIcon.appiconset/Contents.json
 
       - name: "Configure Deployment Platforms"
         id: platforms
