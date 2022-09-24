@@ -734,6 +734,9 @@ jobs:
 
           cd -
 
+          # already installed on CI, but this will update any hotfixes
+          gem install fastlane
+
           fastlane beta --verbose
 
           # TODO: separate build and uploads phases
