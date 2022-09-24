@@ -239,6 +239,7 @@ jobs:
             FAIRAPP_PRODUCT_NAME="${PRODUCT_NAME}"
 
           cp -a "staging/.${{ env.FAIR_APP_ARTIFACT }}-iOS.xcarchive/Products/Applications" "staging/Payload"
+          rm staging/Payload/AppIcon* || true # fix build difference
           ditto -c -k --sequesterRsrc --keepParent "staging/Payload" "${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa"
 
       - name: "Upload iOS Release"
@@ -298,60 +299,7 @@ jobs:
       # distribute the app outside of the App Fair without having to
       # make a separate notarized release.
       #
-      # The fairground's app validation does not take into account the
-      # notarization or signing status of the zip when it validates
-      # the release artifacts, nor does it have access to the signing
-      # secrets for the fork's repository, and so the app can be signed
-      # with any certificate without affecting
-      # the integration-release validation. 
-      #
-      # To enable signing and notarization, the fork's secrets will
-      # need to be setup to include the following keys:
-      #
-      # NOTARY_USERID: The Apple ID for developer ID
-      # NOTARY_PASSWORD: An app-specific password for the developer
-      # NOTARY_TEAMID: The Team ID associated with the developer
-      # NOTARY_CERTKEY_P12_BASE64: The exported certificate and key (see below)
-      # NOTARY_CERTKEY_PASSWORD: The password for the exported certificate
-      #
-      # To obtain the NOTARY_CERTKEY_P12_BASE64 value,
-      # you'll need to request a certificate from Apple, 
-      # import it into the Keychain, and then export is as a .p12
-      # file, which will be base64 encoded and saved into the GitHub secret.
-      #
-      # First get a Developer ID certificate by logging into your 
-      # developer account and selecting Certificates IDs & Profiles,
-      # then create a new Developer ID Application certificate.
-      #
-      # To get a CSR Keychain Access and going to
-      # Certificate Assistant -> Request a Certificate from a Certificate Authority
-      # and ensure the "CA Email Address" matches the developer e-mail,
-      # then save to disk.
-      # Then upload the CSR request file to the portal and it will
-      # create a new certificate for you. 
-      # Download it and add it to your Keychain Access by opening it. 
-      # The certificate should be added to one of your default keychains 
-      # and not to the system keychain;
-      # otherwise you might later have troubles exporting it.
-      #
-      # The signing data can then be exported from Keychain Access.app by 
-      # going to the "Certificates" tab and finding the 
-      # "Developer ID Application: DEVNAME (DEVID)" entry that has a single
-      # child private key named "Mac Developer ID Application: DEVNAME".
-      #
-      # Select **BOTH** items and right-click select "Export 2 Items…".
-      # Export to "Certificates.p12" and select a password.
-      # Create a GitHub Org secret called 
-      # "NOTARIZATION_SIGNING_PASSWORD" with the value of that password.
-      #
-      # Next copy the "NOTARY_CERTKEY_P12_BASE64" to the clipboard with:
-      #
-      #   `base64 Certificates.p12 | pbcopy`
-      #
-      # In your GitHub organization Secrets settings, paste the value
-      # into a "NOTARY_CERTKEY_P12_BASE64" key.
-      #
-      # Reference: https://localazy.com/blog/how-to-automatically-sign-macos-apps-using-github-actions
+      # See: https://docs.github.com/en/actions/deployment/deploying-xcode-applications/installing-an-apple-certificate-on-macos-runners-for-xcode-development
       - name: "Check Notarization Keys"
         id: notarization_setup
         env:
