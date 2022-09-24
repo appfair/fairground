@@ -478,7 +478,7 @@ jobs:
           tar cvzf "staging/${FAIR_APP_ARTIFACT}-source.tgz" --exclude='.git/' --exclude='.build/' --exclude='staging/' .
           rm -rf Dependencies
 
-          $FAIRTOOL app refresh --project ReleasePR
+          $FAIRTOOL app refresh
           $FAIRTOOL fair icon --org "${ORGNAME}" --fair-properties "$FAIRGROUND.xcconfig" --accent-color Assets.xcassets/AccentColor.colorset/Contents.json --app-icon Assets.xcassets/AppIcon.appiconset/Contents.json
 
       - name: "Configure Deployment Platforms"
