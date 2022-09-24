@@ -166,7 +166,7 @@ jobs:
 
       - name: "Check Version: ${{ steps.get_semver_tag.outputs.semver_tag }}"
         id: get_semver_tag
-        run: echo ::set-output name=semver_tag::$(xcodebuild -quiet -workspace ReleasePR/App.xcworkspace -showBuildSettings -json -scheme "${{ env.APP_TARGET }}" archive 2> /dev/null | jq -r '.[].buildSettings.MARKETING_VERSION')
+        run: echo ::set-output name=semver_tag::$(xcodebuild -quiet -workspace ReleasePR/App.xcworkspace -showBuildSettings -json -scheme "${APP_TARGET}" archive 2> /dev/null | jq -r '.[].buildSettings.MARKETING_VERSION')
 
       - name: "Prepare App: ${{ env.ORGNAME }}"
         run: |
@@ -189,8 +189,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $FAIRTOOL app refresh --project .
-          $FAIRTOOL fair validate --verbose --hub "${HUB_REPO}/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project . --fair-properties "$FAIRGROUND.xcconfig" --allow-license "AGPL-3.0"
-          $FAIRTOOL fair icon --org "${{ env.ORGNAME }}" --fair-properties $FAIRGROUND.xcconfig --accent-color Assets.xcassets/AccentColor.colorset/Contents.json --app-icon Assets.xcassets/AppIcon.appiconset/Contents.json
+          $FAIRTOOL fair validate --verbose --hub "${HUB_REPO}/${{ inputs.fairground }}" --org "${ORGNAME}" --base . --project . --fair-properties "$FAIRGROUND.xcconfig" --allow-license "AGPL-3.0"
+          $FAIRTOOL fair icon --org "${ORGNAME}" --fair-properties $FAIRGROUND.xcconfig --accent-color Assets.xcassets/AccentColor.colorset/Contents.json --app-icon Assets.xcassets/AppIcon.appiconset/Contents.json
           mkdir staging/
 
       # Verifies that the project URLs are configured correctly
@@ -222,9 +222,9 @@ jobs:
             -workspace "App.xcworkspace" \
             -jobs 1 \
             -configuration Release \
-            -scheme "${{ env.APP_TARGET }}" \
+            -scheme "${APP_TARGET}" \
             -sdk "iphoneos" \
-            -archivePath "staging/.${{ env.FAIR_APP_ARTIFACT }}-iOS.xcarchive" \
+            -archivePath "staging/.${FAIR_APP_ARTIFACT}-iOS.xcarchive" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             AD_HOC_CODE_SIGNING_ALLOWED=YES \
@@ -250,10 +250,10 @@ jobs:
             -workspace "App.xcworkspace" \
             -jobs 1 \
             -configuration Release \
-            -scheme "${{ env.APP_TARGET }}" \
+            -scheme "${APP_TARGET}" \
             -sdk "macosx" \
             -destination "platform=macOS" \
-            -archivePath "staging/.${{ env.FAIR_APP_ARTIFACT }}-macOS.xcarchive" \
+            -archivePath "staging/.${FAIR_APP_ARTIFACT}-macOS.xcarchive" \
             CODE_SIGNING_REQUIRED=YES \
             CODE_SIGNING_ALLOWED=YES \
             AD_HOC_CODE_SIGNING_ALLOWED=YES \
@@ -268,7 +268,7 @@ jobs:
 
           xcodebuild \
             -exportArchive \
-            -archivePath "staging/.${{ env.FAIR_APP_ARTIFACT }}-macOS.xcarchive" \
+            -archivePath "staging/.${FAIR_APP_ARTIFACT}-macOS.xcarchive" \
             -exportPath "staging/" \
             -exportOptionsPlist "staging/.exportOptions.plist"
 
@@ -277,7 +277,7 @@ jobs:
           codesign -d --entitlements - "staging/${PRODUCT_NAME}.app"
 
           # create the zip file
-          ditto -c -k --sequesterRsrc --keepParent "staging/${PRODUCT_NAME}.app" "${{ env.FAIR_APP_ARTIFACT }}-macOS.zip"
+          ditto -c -k --sequesterRsrc --keepParent "staging/${PRODUCT_NAME}.app" "${FAIR_APP_ARTIFACT}-macOS.zip"
 
           # clean up the app
           rm -r "staging/${PRODUCT_NAME}.app"
@@ -300,7 +300,7 @@ jobs:
         # the same post-processed metadata that the app will use.
         # Convert plists to XML for easier parsing.
         run: |
-          cp Assets.xcassets/AppIcon.appiconset/appicon-iphone-60x60@3x.png staging/"${{ env.FAIR_APP_ARTIFACT }}.png"
+          cp Assets.xcassets/AppIcon.appiconset/appicon-iphone-60x60@3x.png staging/"${FAIR_APP_ARTIFACT}.png"
           cp App.yml staging/
           cp README.md staging/
           cp LICENSE.AGPL staging/
@@ -326,7 +326,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload "${GITHUB_REF#refs/tags/}" -- "${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa"
+          gh release upload "${GITHUB_REF#refs/tags/}" -- "${FAIR_APP_ARTIFACT}-iOS.ipa"
 
       # Notarization is not required for the App Fair, but a developer
       # can opt to notarize their own build which will allow them to 
@@ -365,23 +365,23 @@ jobs:
           codesign --force --deep -v --options runtime --entitlements "sandbox-macos.entitlements" -s "`security find-identity -v | cut -f 4 -d ' ' | head -n 1`" "staging/${PRODUCT_NAME}.app"
 
           # re-create the archive with the signed app for submission
-          ditto -c -k --sequesterRsrc --keepParent "staging/${PRODUCT_NAME}.app" "${{ env.FAIR_APP_ARTIFACT }}-macOS.zip"
+          ditto -c -k --sequesterRsrc --keepParent "staging/${PRODUCT_NAME}.app" "${FAIR_APP_ARTIFACT}-macOS.zip"
 
           # perform notarization and wait for success
-          xcrun notarytool submit --wait --progress --apple-id "${{ secrets.NOTARY_USERID }}" --password "${{ secrets.NOTARY_PASSWORD }}" --team-id "${{ secrets.NOTARY_TEAMID }}" "${{ env.FAIR_APP_ARTIFACT }}-macOS.zip"
+          xcrun notarytool submit --wait --progress --apple-id "${{ secrets.NOTARY_USERID }}" --password "${{ secrets.NOTARY_PASSWORD }}" --team-id "${{ secrets.NOTARY_TEAMID }}" "${FAIR_APP_ARTIFACT}-macOS.zip"
 
           # staple the notarization ticket to the app
           xcrun stapler staple "staging/${PRODUCT_NAME}.app"
 
           # re-create the archive with the signed & stapled artifact
-          ditto -c -k --sequesterRsrc --keepParent "staging/${PRODUCT_NAME}.app" "${{ env.FAIR_APP_ARTIFACT }}-macOS.zip"
+          ditto -c -k --sequesterRsrc --keepParent "staging/${PRODUCT_NAME}.app" "${FAIR_APP_ARTIFACT}-macOS.zip"
 
       - name: "Upload macOS Release"
         if: inputs.target_macos == true && steps.platforms.outputs.macos == 'enabled' && startsWith(github.ref, 'refs/tags/')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload "${GITHUB_REF#refs/tags/}" -- "${{ env.FAIR_APP_ARTIFACT }}-macOS.zip"
+          gh release upload "${GITHUB_REF#refs/tags/}" -- "${FAIR_APP_ARTIFACT}-macOS.zip"
 
 
   # The Integrate-Release phases run in the trusted base fairground.
@@ -415,8 +415,8 @@ jobs:
       - name: "Verify Project http://${{ env.ORGNAME }}.appfair.net"
         run: |
           # check both the App.github.io and App.appfair.net URLs
-          curl --location --fail -s "https://${{ env.ORGNAME }}.${HUB_PAGE}/App" | grep "$FAIRGROUND_LAUNCHPAD""${{ env.ORGNAME }}"
-          curl --location --fail -s "http://${{ env.ORGNAME }}.appfair.net" | grep "$FAIRGROUND_LAUNCHPAD""${{ env.ORGNAME }}"
+          curl --location --fail -s "https://${ORGNAME}.${HUB_PAGE}/App" | grep "$FAIRGROUND_LAUNCHPAD""${ORGNAME}"
+          curl --location --fail -s "http://${ORGNAME}.appfair.net" | grep "$FAIRGROUND_LAUNCHPAD""${ORGNAME}"
 
       - name: "Checkout Base Fairground"
         uses: actions/checkout@v2
@@ -431,7 +431,7 @@ jobs:
 
       - name: "Check Version"
         id: get_semver_tag
-        run: echo ::set-output name=semver_tag::$(xcodebuild -quiet -workspace ReleasePR/App.xcworkspace -showBuildSettings -json -scheme "${{ env.APP_TARGET }}" archive 2> /dev/null | jq -r '.[].buildSettings.MARKETING_VERSION')
+        run: echo ::set-output name=semver_tag::$(xcodebuild -quiet -workspace ReleasePR/App.xcworkspace -showBuildSettings -json -scheme "${APP_TARGET}" archive 2> /dev/null | jq -r '.[].buildSettings.MARKETING_VERSION')
 
       #- name: Verify workflow integrity
       # the workflows must be identical; fetch & merge upstream if this fails
@@ -448,7 +448,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $FAIRTOOL fair validate --base .  --project ReleasePR --hub "${HUB_REPO}/${{ inputs.fairground }}" --base-repo "App" --org "${{ env.ORGNAME }}" --ref "${{ env.COMMITHASH }}" --integration-title "${{ env.PRTITLE }}" --fair-properties "$FAIRGROUND.xcconfig" --fairseal-issuer "${{ inputs.fairseal_issuer }}" --fairseal-key "${{ secrets.APP_FAIR_FAIRSEAL_KEY }}" --allow-name "${{ secrets.APP_FAIR_ALLOW_NAME }}" --deny-name "${{ secrets.APP_FAIR_DENY_NAME }}" --allow-from "${{ secrets.APP_FAIR_ALLOW_FROM }}" --deny-from "${{ secrets.APP_FAIR_DENY_FROM }}" --verbose
+          $FAIRTOOL fair validate --base .  --project ReleasePR --hub "${HUB_REPO}/${{ inputs.fairground }}" --base-repo "App" --org "${ORGNAME}" --ref "${COMMITHASH}" --integration-title "${PRTITLE}" --fair-properties "$FAIRGROUND.xcconfig" --fairseal-issuer "${{ inputs.fairseal_issuer }}" --fairseal-key "${{ secrets.APP_FAIR_FAIRSEAL_KEY }}" --allow-name "${{ secrets.APP_FAIR_ALLOW_NAME }}" --deny-name "${{ secrets.APP_FAIR_DENY_NAME }}" --allow-from "${{ secrets.APP_FAIR_ALLOW_FROM }}" --deny-from "${{ secrets.APP_FAIR_DENY_FROM }}" --verbose
 
           mkdir staging/
 
@@ -461,25 +461,25 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
         run: |
-          $FAIRTOOL fair merge --verbose --hub "${HUB_REPO}/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project ReleasePR --fair-properties "$FAIRGROUND.xcconfig" --output .
+          $FAIRTOOL fair merge --verbose --hub "${HUB_REPO}/${{ inputs.fairground }}" --org "${ORGNAME}" --base . --project ReleasePR --fair-properties "$FAIRGROUND.xcconfig" --output .
 
           file Assets.xcassets/AppIcon.appiconset/*.*
 
           # needed to be able to ad-hoc codesign embedded frameworks
           plutil -replace 'com\.apple\.security\.cs\.disable-library-validation' -bool true sandbox-macos.entitlements
 
-          $FAIRTOOL fair validate --hub "${HUB_REPO}/${{ inputs.fairground }}" --org "${{ env.ORGNAME }}" --base . --project . --fair-properties "$FAIRGROUND.xcconfig" --allow-license "AGPL-3.0"
+          $FAIRTOOL fair validate --hub "${HUB_REPO}/${{ inputs.fairground }}" --org "${ORGNAME}" --base . --project . --fair-properties "$FAIRGROUND.xcconfig" --allow-license "AGPL-3.0"
 
           xcrun swift package resolve
           cat Package.resolved # useful for the log
           cp Package.resolved Sources/App/Resources/ # embed in the app
 
           cp -a .build/checkouts Dependencies
-          tar cvzf "staging/${{ env.FAIR_APP_ARTIFACT }}-source.tgz" --exclude='.git/' --exclude='.build/' --exclude='staging/' .
+          tar cvzf "staging/${FAIR_APP_ARTIFACT}-source.tgz" --exclude='.git/' --exclude='.build/' --exclude='staging/' .
           rm -rf Dependencies
 
           $FAIRTOOL app refresh --project ReleasePR
-          $FAIRTOOL fair icon --org "${{ env.ORGNAME }}" --fair-properties "$FAIRGROUND.xcconfig" --accent-color Assets.xcassets/AccentColor.colorset/Contents.json --app-icon Assets.xcassets/AppIcon.appiconset/Contents.json
+          $FAIRTOOL fair icon --org "${ORGNAME}" --fair-properties "$FAIRGROUND.xcconfig" --accent-color Assets.xcassets/AccentColor.colorset/Contents.json --app-icon Assets.xcassets/AppIcon.appiconset/Contents.json
 
       - name: "Configure Deployment Platforms"
         id: platforms
@@ -501,7 +501,7 @@ jobs:
           cp sandbox-macos.entitlements staging/
           cp sandbox-ios.entitlements staging/
 
-          cp Assets.xcassets/AppIcon.appiconset/appicon-iphone-60x60@3x.png staging/"${{ env.FAIR_APP_ARTIFACT }}.png"
+          cp Assets.xcassets/AppIcon.appiconset/appicon-iphone-60x60@3x.png staging/"${FAIR_APP_ARTIFACT}.png"
           cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.png staging/ || true
           cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.jpg staging/ || true
 
@@ -511,17 +511,6 @@ jobs:
           shasum -a 256 staging/*.*
 
 
-      - name: "Check PreFlight Eligibility"
-        id: preflight
-        if: env.TESTFLIGHT_TEAMID != ''
-        env:
-          TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
-        run: |
-          echo "::set-output name=defined::true"
-          # check the 'TESTFLIGHT_APP_ID' key in $FAIRGROUND.xcconfig
-          echo "::set-output name=appid::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme $APP_TARGET archive 2>/dev/null | jq -r '.[].buildSettings.TESTFLIGHT_APP_ID')"
-
-
       - name: "Build iOS App"
         if: inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled'
         run: |
@@ -529,17 +518,17 @@ jobs:
             -workspace "App.xcworkspace" \
             -jobs 1 \
             -configuration Release \
-            -scheme "${{ env.APP_TARGET }}" \
+            -scheme "${APP_TARGET}" \
             -sdk "iphoneos" \
-            -archivePath "staging/.${{ env.FAIR_APP_ARTIFACT }}-iOS.xcarchive" \
+            -archivePath "staging/.${FAIR_APP_ARTIFACT}-iOS.xcarchive" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             AD_HOC_CODE_SIGNING_ALLOWED=YES \
             CODE_SIGN_IDENTITY="-" \
             FAIRAPP_PRODUCT_NAME="${PRODUCT_NAME}"
 
-          cp -a "staging/.${{ env.FAIR_APP_ARTIFACT }}-iOS.xcarchive/Products/Applications" "staging/Payload"
-          ditto -c -k --sequesterRsrc --keepParent "staging/Payload" "staging/${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa"
+          cp -a "staging/.${FAIR_APP_ARTIFACT}-iOS.xcarchive/Products/Applications" "staging/Payload"
+          ditto -c -k --sequesterRsrc --keepParent "staging/Payload" "staging/${FAIR_APP_ARTIFACT}-iOS.ipa"
 
       - name: "Replicate sealed iOS build"
         if: inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled'
@@ -547,7 +536,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
         run: |
           # build the URL for the GitHub download artifact
-          IPAURL="https://${HUB_REPO}/${{ env.ORGNAME }}/App/releases/download/${{ steps.get_semver_tag.outputs.semver_tag }}/${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa" 
+          IPAURL="https://${HUB_REPO}/${ORGNAME}/App/releases/download/${{ steps.get_semver_tag.outputs.semver_tag }}/${FAIR_APP_ARTIFACT}-iOS.ipa" 
 
           echo "Generating fairseal for: $IPAURL"
 
@@ -561,10 +550,10 @@ jobs:
             --hub "${HUB_REPO}/${{ inputs.fairground }}" \
             --base-repo "App" \
             --token "${{ secrets.APP_FAIR_BOT_TOKEN }}" \
-            --org "${{ env.ORGNAME }}" \
+            --org "${ORGNAME}" \
             --fairseal-key "${{ secrets.APP_FAIR_FAIRSEAL_KEY }}" \
-            --trusted-artifact "staging/${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa" \
-            --untrusted-artifact "staging/untrusted/${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa" \
+            --trusted-artifact "staging/${FAIR_APP_ARTIFACT}-iOS.ipa" \
+            --untrusted-artifact "staging/untrusted/${FAIR_APP_ARTIFACT}-iOS.ipa" \
             --disassembler=/usr/bin/otool \
             --permitted-diffs 0 \
             --retry-duration 600 \
@@ -576,6 +565,15 @@ jobs:
 
           mv -f staging/.artifact_stash/* staging/ || true # restore stash
 
+      - name: "Check PreFlight Eligibility"
+        id: preflight
+        if: env.TESTFLIGHT_TEAMID != ''
+        env:
+          TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
+        run: |
+          echo "::set-output name=defined::true"
+          # check the 'TESTFLIGHT_APP_ID' key in $FAIRGROUND.xcconfig
+          echo "::set-output name=appid::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme $APP_TARGET archive 2>/dev/null | jq -r '.[].buildSettings.TESTFLIGHT_APP_ID')"
 
       - name: "Prepare PreFlight"
         if: env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.preflight.outputs.appid > 0
