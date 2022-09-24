@@ -198,12 +198,7 @@ jobs:
         run: |
           # check both the *.github.io and *.appfair.net URLs
           curl --location --fail -s "https://${ORGNAME}.${HUB_PAGE}/App" | grep "$FAIRGROUND_LAUNCHPAD""${ORGNAME}"
-
-          if [ "${ORGNAME}" -eq "App-Fair" ]; then
-            curl --location --fail -s "http://${ORGNAME}.app" | grep "$FAIRGROUND_LAUNCHPAD""${ORGNAME}"
-          else
-            curl --location --fail -s "http://${ORGNAME}.appfair.net" | grep "$FAIRGROUND_LAUNCHPAD""${ORGNAME}"
-          fi
+          curl --location --fail -s "http://${ORGNAME}.appfair.net" | grep "$FAIRGROUND_LAUNCHPAD""${ORGNAME}" || curl --location --fail -s "http://${ORGNAME}.app" | grep "$FAIRGROUND_LAUNCHPAD""${ORGNAME}"
 
       - name: "Resolve Swift Packages"
         run: |
@@ -421,7 +416,7 @@ jobs:
         run: |
           # check both the App.github.io and App.appfair.net URLs
           curl --location --fail -s "https://${ORGNAME}.${HUB_PAGE}/App" | grep "$FAIRGROUND_LAUNCHPAD""${ORGNAME}"
-          curl --location --fail -s "http://${ORGNAME}.appfair.net" | grep "$FAIRGROUND_LAUNCHPAD""${ORGNAME}"
+          curl --location --fail -s "http://${ORGNAME}.appfair.net" | grep "$FAIRGROUND_LAUNCHPAD""${ORGNAME}" || curl --location --fail -s "http://${ORGNAME}.app" | grep "$FAIRGROUND_LAUNCHPAD""${ORGNAME}"
 
       - name: "Checkout Base Fairground"
         uses: actions/checkout@v2
