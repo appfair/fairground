@@ -607,6 +607,7 @@ jobs:
           mkdir -p fastlane/metadata/
 
           cat > fastlane/Fastfile << EOF
+          opt_out_usage
 
           lane :setup do
             setup_ci if ENV['CI']
