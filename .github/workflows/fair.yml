@@ -705,6 +705,9 @@ jobs:
           # already installed on CI, but this will update any hotfixes
           gem install fastlane
 
+          # log the environment
+          fastlane env
+
           # acquire embedded.mobileprovision
           fastlane provision --verbose
 
