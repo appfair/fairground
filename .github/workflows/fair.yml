@@ -209,7 +209,7 @@ jobs:
 
       - name: "Test iOS App"
         # need to set up test scheme to make this work
-        if: inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' && startsWith(github.ref, 'refs/tags/') == false
+        if: steps.platforms.outputs.ios == 'enabled' && startsWith(github.ref, 'refs/tags/') == false
         run: |
           mkdir -p project.xcodeproj/xcshareddata/xcschemes/
           # schemes are no saved by default, so make a test action
@@ -218,7 +218,7 @@ jobs:
           rm project.xcodeproj/xcshareddata/xcschemes/AppFairApp.xcscheme
 
       - name: "Archive iOS App"
-        if: inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' && startsWith(github.ref, 'refs/tags/') && startsWith(github.ref, 'refs/tags/')
+        if: steps.platforms.outputs.ios == 'enabled' && startsWith(github.ref, 'refs/tags/') && startsWith(github.ref, 'refs/tags/')
         run: |
           xcodebuild archive \
             -workspace "App.xcworkspace" \
@@ -237,7 +237,7 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent "staging/Payload" "${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa"
 
       - name: "Test macOS App"
-        if: inputs.target_macos == true && steps.platforms.outputs.macos == 'enabled' && startsWith(github.ref, 'refs/tags/') == false
+        if: steps.platforms.outputs.macos == 'enabled' && startsWith(github.ref, 'refs/tags/') == false
         run: |
           mkdir -p project.xcodeproj/xcshareddata/xcschemes/
           # schemes are no saved by default, so make a test action
@@ -246,7 +246,7 @@ jobs:
           rm project.xcodeproj/xcshareddata/xcschemes/AppFairApp.xcscheme
 
       - name: "Archive macOS App"
-        if: inputs.target_macos == true && steps.platforms.outputs.macos == 'enabled' && startsWith(github.ref, 'refs/tags/')
+        if: steps.platforms.outputs.macos == 'enabled' && startsWith(github.ref, 'refs/tags/')
         run: |
           xcodebuild archive \
             -workspace "App.xcworkspace" \
@@ -322,7 +322,7 @@ jobs:
           gh release upload "${GITHUB_REF#refs/tags/}" -- $(find staging -maxdepth 1 -type f)
 
       - name: "Upload iOS Release"
-        if: inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' && startsWith(github.ref, 'refs/tags/')
+        if: steps.platforms.outputs.ios == 'enabled' && startsWith(github.ref, 'refs/tags/')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -377,7 +377,7 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent "staging/${PRODUCT_NAME}.app" "${FAIR_APP_ARTIFACT}-macOS.zip"
 
       - name: "Upload macOS Release"
-        if: inputs.target_macos == true && steps.platforms.outputs.macos == 'enabled' && startsWith(github.ref, 'refs/tags/')
+        if: steps.platforms.outputs.macos == 'enabled' && startsWith(github.ref, 'refs/tags/')
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -514,7 +514,7 @@ jobs:
 
 
       - name: "Build iOS App"
-        if: inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled'
+        if: steps.platforms.outputs.ios == 'enabled'
         run: |
           xcodebuild archive \
             -workspace "App.xcworkspace" \
@@ -533,7 +533,7 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent "staging/Payload" "staging/${FAIR_APP_ARTIFACT}-iOS.ipa"
 
       - name: "Replicate sealed iOS build"
-        if: inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled'
+        if: steps.platforms.outputs.ios == 'enabled'
         env:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
         run: |
@@ -689,7 +689,7 @@ jobs:
           $FAIRTOOL fair metadata --export fastlane/metadata App.yml
 
       - name: "PreFlight iOS"
-        if: inputs.target_ios == true && steps.platforms.outputs.ios == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.preflight.outputs.appid > 0
+        if: steps.platforms.outputs.ios == 'enabled' && env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.preflight.outputs.appid > 0
         env:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
           TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
@@ -753,7 +753,7 @@ jobs:
           #mv $FAIRGROUND.xcconfig.clean $FAIRGROUND.xcconfig
 
       - name: "Build macOS App"
-        if: inputs.target_macos == true && steps.platforms.outputs.macos == 'enabled'
+        if: steps.platforms.outputs.macos == 'enabled'
         run: |
           xcodebuild archive \
             -workspace "App.xcworkspace" \
@@ -797,7 +797,7 @@ jobs:
       # compare the contents of the PR's un-trusted artifacts with
       # the contents of the base fair-ground's trusted artifacts
       - name: "Replicate sealed macOS build"
-        if: inputs.target_macos == true && steps.platforms.outputs.macos == 'enabled'
+        if: steps.platforms.outputs.macos == 'enabled'
         env:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
 
