@@ -575,7 +575,7 @@ jobs:
         run: |
           echo "::set-output name=defined::true"
           # check the 'TESTFLIGHT_APP_ID' key in $FAIRGROUND.xcconfig
-          echo "::set-output name=appid::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme $APP_TARGET archive 2>/dev/null | jq -r '.[].buildSettings.TESTFLIGHT_APP_ID')"
+          echo "::set-output name=appid::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme $APP_TARGET archive | jq -r '.[].buildSettings.TESTFLIGHT_APP_ID')"
 
       - name: "Prepare PreFlight"
         if: env.TESTFLIGHT_TEAMID != null && env.TESTFLIGHT_TEAMID != '' && steps.preflight.outputs.appid > 0
