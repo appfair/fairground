@@ -390,7 +390,7 @@ jobs:
   # required for inclusion in the catalog.  
   integrate_release:
     name: "Integrate Release"
-    if: github.repository_owner == 'appfair' && '${{ github.event.pull_request.id }}' != null
+    if: github.repository_owner == 'appfair' && '${{ github.event.pull_request.id }}' != ''
     runs-on: macos-12
     timeout-minutes: 60
     steps:
