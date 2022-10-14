@@ -139,7 +139,7 @@ jobs:
   # and a fairseal is published.
   fork_apply:
     name: "Fork Apply"
-    if: inputs.fairseal_issuer == '' && github.repository_owner != 'appfair'
+    if: inputs.fairseal_issuer == '' && github.repository_owner != 'appfair' && startsWith(github.ref, 'refs/tags/') == true
     runs-on: macos-12
     timeout-minutes: 60
     steps:
@@ -390,7 +390,7 @@ jobs:
   # required for inclusion in the catalog.  
   integrate_release:
     name: "Integrate Release"
-    if: github.repository_owner == 'appfair' && '${{ github.event.pull_request.id }}' != ''
+    if: github.repository_owner == 'appfair' && github.event_type == 'pull_request'
     runs-on: macos-12
     timeout-minutes: 60
     steps:
