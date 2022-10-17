@@ -220,6 +220,7 @@ jobs:
       - name: "Archive iOS App"
         if: steps.platforms.outputs.ios == 'enabled' && startsWith(github.ref, 'refs/tags/') && startsWith(github.ref, 'refs/tags/')
         run: |
+          set -o pipefail && env NSUnbufferedIO=YES \
           xcodebuild archive \
             -workspace "App.xcworkspace" \
             -jobs 1 \
@@ -231,7 +232,8 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             AD_HOC_CODE_SIGNING_ALLOWED=YES \
             CODE_SIGN_IDENTITY="-" \
-            FAIRAPP_PRODUCT_NAME="${PRODUCT_NAME}"
+            FAIRAPP_PRODUCT_NAME="${PRODUCT_NAME}" \
+            | xcpretty
 
           cp -a "staging/.${{ env.FAIR_APP_ARTIFACT }}-iOS.xcarchive/Products/Applications" "staging/Payload"
           ditto -c -k --sequesterRsrc --keepParent "staging/Payload" "${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa"
@@ -248,6 +250,7 @@ jobs:
       - name: "Archive macOS App"
         if: steps.platforms.outputs.macos == 'enabled' && startsWith(github.ref, 'refs/tags/')
         run: |
+          set -o pipefail && env NSUnbufferedIO=YES \
           xcodebuild archive \
             -workspace "App.xcworkspace" \
             -jobs 1 \
@@ -264,7 +267,8 @@ jobs:
             CODE_SIGN_IDENTITY="-" \
             OTHER_CODE_SIGN_FLAGS="--deep --timestamp=none" \
             OTHER_LIBTOOLFLAGS="-D" \
-            FAIRAPP_PRODUCT_NAME="${PRODUCT_NAME}"
+            FAIRAPP_PRODUCT_NAME="${PRODUCT_NAME}" \
+            | xcpretty
 
           echo '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>method</key><string>mac-application</string><key>signingStyle</key><string>automatic</string><key>uploadBitcode</key><false/><key>compileBitcode</key><false/><key>uploadSymbols</key><false/></dict></plist>' > "staging/.exportOptions.plist"
 
@@ -516,6 +520,7 @@ jobs:
       - name: "Build iOS App"
         if: steps.platforms.outputs.ios == 'enabled'
         run: |
+          set -o pipefail && env NSUnbufferedIO=YES \
           xcodebuild archive \
             -workspace "App.xcworkspace" \
             -jobs 1 \
@@ -527,7 +532,8 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             AD_HOC_CODE_SIGNING_ALLOWED=YES \
             CODE_SIGN_IDENTITY="-" \
-            FAIRAPP_PRODUCT_NAME="${PRODUCT_NAME}"
+            FAIRAPP_PRODUCT_NAME="${PRODUCT_NAME}" \
+            | xcpretty
 
           cp -a "staging/.${FAIR_APP_ARTIFACT}-iOS.xcarchive/Products/Applications" "staging/Payload"
           ditto -c -k --sequesterRsrc --keepParent "staging/Payload" "staging/${FAIR_APP_ARTIFACT}-iOS.ipa"
@@ -755,6 +761,7 @@ jobs:
       - name: "Build macOS App"
         if: steps.platforms.outputs.macos == 'enabled'
         run: |
+          set -o pipefail && env NSUnbufferedIO=YES \
           xcodebuild archive \
             -workspace "App.xcworkspace" \
             -jobs 1 \
@@ -771,7 +778,9 @@ jobs:
             CODE_SIGN_IDENTITY="-" \
             OTHER_CODE_SIGN_FLAGS="--deep --timestamp=none" \
             OTHER_LIBTOOLFLAGS="-D" \
-            FAIRAPP_PRODUCT_NAME="${PRODUCT_NAME}"
+            FAIRAPP_PRODUCT_NAME="${PRODUCT_NAME}" \
+            | xcpretty
+
           shasum -a 256 "staging/.${FAIR_APP_ARTIFACT}-macOS.xcarchive/Products/Applications"/*.app/Contents/MacOS/*
 
           echo '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>method</key><string>mac-application</string><key>signingStyle</key><string>automatic</string></dict></plist>' > "staging/exportOptions.plist"
