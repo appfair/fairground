@@ -230,6 +230,16 @@ jobs:
           # Copy the screenshots to the docs/ folder
           # rm -rf docs/screenshots && mv ~/Library/Developer/CoreSimulator/Devices/*/data/Library/Caches/com.apple.dt.xctest.tool/screenshots docs/screenshots && ls -la docs/screenshots
 
+      # Create a new release for this tag
+      - name: "Create Release"
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Creating release: ${GITHUB_REF#refs/tags/}"
+          # create a pre-release if it doesn't already exist 
+          gh release create "${GITHUB_REF#refs/tags/}" --prerelease --title "Release ${GITHUB_REF#refs/tags/}" --generate-notes || true
+
       - name: "Archive iOS App"
         if: steps.platforms.outputs.ios == 'enabled' && startsWith(github.ref, 'refs/tags/') && startsWith(github.ref, 'refs/tags/')
         run: |
@@ -250,6 +260,13 @@ jobs:
 
           cp -a "staging/.${{ env.FAIR_APP_ARTIFACT }}-iOS.xcarchive/Products/Applications" "staging/Payload"
           ditto -c -k --sequesterRsrc --keepParent "staging/Payload" "${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa"
+
+      - name: "Upload iOS Release"
+        if: steps.platforms.outputs.ios == 'enabled' && startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload "${GITHUB_REF#refs/tags/}" -- "${FAIR_APP_ARTIFACT}-iOS.ipa"
 
       - name: "Test macOS App"
         if: steps.platforms.outputs.macos == 'enabled'
@@ -299,16 +316,6 @@ jobs:
           # create the zip file
           ditto -c -k --sequesterRsrc --keepParent "staging/${PRODUCT_NAME}.app" "${FAIR_APP_ARTIFACT}-macOS.zip"
 
-      # Create a new release for this tag
-      - name: "Create Release"
-        if: startsWith(github.ref, 'refs/tags/')
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "Creating release: ${GITHUB_REF#refs/tags/}"
-          # create a pre-release if it doesn't already exist 
-          gh release create "${GITHUB_REF#refs/tags/}" --prerelease --title "Release ${GITHUB_REF#refs/tags/}" --generate-notes || true
-
       - name: "Upload Release Assets"
         if: startsWith(github.ref, 'refs/tags/')
         env:
@@ -319,16 +326,8 @@ jobs:
         run: |
           cp Assets.xcassets/AppIcon.appiconset/appicon-iphone-60x60@3x.png staging/"${FAIR_APP_ARTIFACT}.png"
           cp App.yml staging/
-          cp README.md staging/
-          cp LICENSE.AGPL staging/
-          cp LICENSE_EXCEPTION.FAIR staging/
           cp Info.plist staging/
-          cp sandbox-macos.entitlements staging/
-          cp sandbox-ios.entitlements staging/
-          cp Package.resolved staging/
 
-          cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.png staging/ || true
-          cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.jpg staging/ || true
           ls -la staging/
 
           echo "Uploading release assets: ${GITHUB_REF#refs/tags/}"
@@ -338,13 +337,6 @@ jobs:
 
           # upload staging assets to the existing GitHub release
           gh release upload "${GITHUB_REF#refs/tags/}" -- $(find staging -maxdepth 1 -type f)
-
-      - name: "Upload iOS Release"
-        if: steps.platforms.outputs.ios == 'enabled' && startsWith(github.ref, 'refs/tags/')
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release upload "${GITHUB_REF#refs/tags/}" -- "${FAIR_APP_ARTIFACT}-iOS.ipa"
 
       # Notarization is not required for the App Fair, but a developer
       # can opt to notarize their own build which will allow them to 
