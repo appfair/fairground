@@ -195,6 +195,7 @@ jobs:
 
       # Verifies that the project URLs are configured correctly
       - name: "Verify Project http://${{ env.ORGNAME }}.appfair.net"
+        if: ${{ env.ORGNAME }} != 'appfair'
         run: |
           # check both the *.github.io and *.appfair.net URLs
           curl --location --fail -s "https://${ORGNAME}.${HUB_PAGE}/App" | grep "$FAIRGROUND_LAUNCHPAD""${ORGNAME}"
