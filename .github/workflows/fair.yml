@@ -139,7 +139,7 @@ jobs:
   # and a fairseal is published.
   fork_apply:
     name: "Fork Apply"
-    if: inputs.fairseal_issuer == '' && github.repository_owner != 'appfair' && startsWith(github.ref, 'refs/tags/') == true
+    #if: inputs.fairseal_issuer == '' && github.repository_owner != 'appfair' && startsWith(github.ref, 'refs/tags/') == true
     runs-on: macos-12
     timeout-minutes: 60
     steps:
@@ -210,10 +210,9 @@ jobs:
       - name: "Test iOS App"
         # need to set up test scheme to make this work
         if: steps.platforms.outputs.ios == 'enabled'
-        # && startsWith(github.ref, 'refs/tags/') == false
         run: |
           mkdir -p project.xcodeproj/xcshareddata/xcschemes/
-          # schemes are no saved by default, so make a test action
+          # schemes are not saved by default, so create a test action
           echo '<?xml version="1.0" encoding="UTF-8"?><Scheme LastUpgradeVersion = "1400" version = "1.3"><TestAction buildConfiguration = "Debug" selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB" selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB" shouldUseLaunchSchemeArgsEnv = "YES"><Testables><TestableReference skipped = "NO"><BuildableReference BuildableIdentifier = "primary" BlueprintIdentifier = "AppTests" BuildableName = "AppTests" BlueprintName = "AppTests" ReferencedContainer = "container:"></BuildableReference></TestableReference></Testables></TestAction></Scheme>' > project.xcodeproj/xcshareddata/xcschemes/AppFairApp.xcscheme
 
           set -o pipefail && env NSUnbufferedIO=YES \
@@ -243,7 +242,7 @@ jobs:
           gh release create "${GITHUB_REF#refs/tags/}" --prerelease --title "Release ${GITHUB_REF#refs/tags/}" --generate-notes || true
 
       - name: "Archive iOS App"
-        if: steps.platforms.outputs.ios == 'enabled' && startsWith(github.ref, 'refs/tags/') && startsWith(github.ref, 'refs/tags/')
+        if: steps.platforms.outputs.ios == 'enabled'
         run: |
           set -o pipefail && env NSUnbufferedIO=YES \
           xcodebuild archive \
@@ -272,7 +271,6 @@ jobs:
 
       - name: "Test macOS App"
         if: steps.platforms.outputs.macos == 'enabled'
-        # && startsWith(github.ref, 'refs/tags/') == false
         run: |
           mkdir -p project.xcodeproj/xcshareddata/xcschemes/
           # schemes are no saved by default, so make a test action
@@ -283,7 +281,7 @@ jobs:
           rm project.xcodeproj/xcshareddata/xcschemes/AppFairApp.xcscheme
 
       - name: "Archive macOS App"
-        if: steps.platforms.outputs.macos == 'enabled' && startsWith(github.ref, 'refs/tags/')
+        if: steps.platforms.outputs.macos == 'enabled'
         run: |
           set -o pipefail && env NSUnbufferedIO=YES \
           xcodebuild archive \
@@ -352,7 +350,7 @@ jobs:
         id: notarization_setup
         env:
             NOTARY_TEAMID: ${{ secrets.NOTARY_TEAMID }}
-        if: env.NOTARY_TEAMID != ''
+        if: env.NOTARY_TEAMID != '' && startsWith(github.ref, 'refs/tags/')
         # transfer the secret to an env variable so it can be checked with `if`
         run: echo "::set-output name=defined::true"
 
@@ -396,6 +394,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload "${GITHUB_REF#refs/tags/}" -- "${FAIR_APP_ARTIFACT}-macOS.zip"
+
+      - name: "Upload Build Artifacts"
+        # upload the trusted artifacts for each build for reproducible-builds
+        uses: actions/upload-artifact@v2
+        if: always()
+        with:
+          path: staging
 
 
   # The Integrate-Release phases run in the trusted base fairground.
