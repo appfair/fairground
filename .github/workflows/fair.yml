@@ -138,7 +138,7 @@ jobs:
   # once the Integrate-Release phases (below) are successfully run
   # and a fairseal is published.
   fork_apply:
-    name: "Fork Apply"
+    name: "Fork Apply: ${{ github.event_name }}"
     #if: github.repository_owner != 'appfair' && github.event_name != 'pull_request_target'
     if: github.event_name != 'pull_request_target'
     runs-on: macos-12
