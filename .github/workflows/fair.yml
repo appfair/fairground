@@ -225,7 +225,7 @@ jobs:
           ls -la ~/Library/Developer/CoreSimulator/Devices/*/data/Library/Caches/com.apple.dt.xctest.tool/screenshots || true
 
           # store a zip of the screenshots in staging
-          ditto -c -k --keepParent ~/Library/Developer/CoreSimulator/Devices/*/data/Library/Caches/com.apple.dt.xctest.tool/screenshots staging/${FAIR_APP_ARTIFACT}-iOS-metadata.zip
+          ditto -c -k --keepParent ~/Library/Developer/CoreSimulator/Devices/*/data/Library/Caches/com.apple.dt.xctest.tool/screenshots staging/${FAIR_APP_ARTIFACT}-iOS-screenshots.zip
 
           # Copy the screenshots to the docs/ folder
           # rm -rf docs/screenshots && mv ~/Library/Developer/CoreSimulator/Devices/*/data/Library/Caches/com.apple.dt.xctest.tool/screenshots docs/screenshots && ls -la docs/screenshots
