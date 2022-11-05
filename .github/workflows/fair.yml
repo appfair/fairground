@@ -519,11 +519,12 @@ jobs:
 
           cp App.yml staging/
           cp Package.resolved staging/
-          cp Info.plist staging/
-          cp sandbox-macos.entitlements staging/
-          cp sandbox-ios.entitlements staging/
+          # cp Info.plist staging/
+          # cp sandbox-macos.entitlements staging/
+          # cp sandbox-ios.entitlements staging/
 
           cp Assets.xcassets/AppIcon.appiconset/appicon-iphone-60x60@3x.png staging/"${FAIR_APP_ARTIFACT}.png"
+
           cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.png staging/ || true
           cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.jpg staging/ || true
 
@@ -655,13 +656,21 @@ jobs:
           end
 
           lane :metadata do
-            deliver({
-              force: true,
-              skip_metadata: false,
-              skip_screenshots: true,
-              skip_binary_upload: true,
+            upload_to_app_store({
+              force: true, # Set to true to skip verification of HTML preview
+              app_identifier: "${PREFLIGHT_BUNDLE_PREFIX}.${BUNDLE_ID}",
+              run_precheck_before_submit: false,
+              use_live_version: false,
+              edit_live: false, # this option disables ipa upload and screenshot upload
+              overwrite_screenshots: true,
+              sync_screenshots: true,
               submit_for_review: false,
-              automatic_release: false,
+              skip_screenshots: false,
+              skip_metadata: false,
+              ignore_language_directory_validation: false,
+              screenshots_path: "fastlane/screenshots/",
+              metadata_path: "fastlane/metadata/",
+              #app_rating_config_path: "fastlane/rating_config.json",
             })
           end
 
@@ -690,11 +699,6 @@ jobs:
           # copy over the app icon
           cp -v "staging/${FAIR_APP_ARTIFACT}.png" fastlane/metadata/app_icon.png
 
-          mkdir -p fastlane/screenshots/
-          cp docs/screenshots/screenshot*-[0-9]*x[0-9]*.png fastlane/screenshots/ || true
-          # tolerate absent screenshots
-          rmdir fastlane/screenshots/ || true 
-
           # Export the metadata from the App.yml into fastlane's metadata folder
           mkdir -p fastlane/metadata/
 
@@ -702,13 +706,21 @@ jobs:
           echo "https://${HUB_REPO}/${ORGNAME}/App/discussions" > fastlane/metadata/support_url.txt
           echo "https://${ORGNAME}.${HUB_PAGE}/App" > fastlane/metadata/marketing_url.txt
 
-          #mkdir -p fastlane/metadata/review_information
-          #echo "App" > fastlane/metadata/review_information/first_name.txt
-          #echo "Fair" > fastlane/metadata/review_information/last_name.txt
-          #echo "appfair@appfair.org" > fastlane/metadata/review_information/email_address.txt
-          #echo "appfair@appfair.org" > fastlane/metadata/review_information/phone_number.txt
+          # fetch the screenshots zip and unpack
+          curl -fsSL -O "https://${HUB_REPO}/${ORGNAME}/App/releases/download/${{ steps.get_semver_tag.outputs.semver_tag }}/${FAIR_APP_ARTIFACT}-iOS-screenshots.zip" 
+          unzip "${FAIR_APP_ARTIFACT}-iOS-screenshots.zip" -d fastlane/
+          ls -la fastlane/
+          ls -la fastlane/screenshots/
+          du -skh fastlane/screenshots/
+
+          mkdir -p fastlane/metadata/review_information
+          echo "App" > fastlane/metadata/review_information/first_name.txt
+          echo "Fair" > fastlane/metadata/review_information/last_name.txt
+          echo "appfair@appfair.org" > fastlane/metadata/review_information/email_address.txt
+          echo "1112223333" > fastlane/metadata/review_information/phone_number.txt
 
           $FAIRTOOL fair metadata --export fastlane/metadata App.yml
+          FASTLANE_ENABLE_BETA_DELIVER_SYNC_SCREENSHOTS=1 fastlane metadata
 
       - name: "PreFlight iOS"
         if: steps.preflight.outputs.appid > 0
