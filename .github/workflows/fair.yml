@@ -619,6 +619,7 @@ jobs:
           TESTFLIGHT_KEY_ID: ${{ secrets.TESTFLIGHT_KEY_ID }}
           TESTFLIGHT_KEY_CONTENTS: ${{ secrets.TESTFLIGHT_KEY_CONTENTS }}
           TESTFLIGHT_CODESIGNING_IDENTITY: ${{ secrets.TESTFLIGHT_CODESIGNING_IDENTITY }}
+          FASTLANE_OPT_OUT_USAGE: 1
         run: |
           # Setup the keychain and import the signing cert
           security delete-keychain appstore.keychain || true
@@ -641,6 +642,10 @@ jobs:
 
           cat > fastlane/Fastfile << EOF
           opt_out_usage
+
+          lane :setup_ci do
+            # perform any CI-specific actions here
+          end
 
           lane :setup do
             setup_ci if ENV['CI']
@@ -666,6 +671,7 @@ jobs:
           end
 
           lane :metadata do
+            setup
             upload_to_app_store({
               force: true, # Set to true to skip verification of HTML preview
               app_identifier: "${PREFLIGHT_BUNDLE_PREFIX}.${BUNDLE_ID}",
@@ -744,6 +750,7 @@ jobs:
           TESTFLIGHT_CODESIGNING_IDENTITY: ${{ secrets.TESTFLIGHT_CODESIGNING_IDENTITY }}
           FASTLANE_PROFILE_PLATFORM: ios
           FASTLANE_DESTINATION: generic/platform=iOS
+          FASTLANE_OPT_OUT_USAGE: 1
           PLATFORM_NAME: iphoneos
           SUPPORTED_PLATFORMS: iphoneos
           CI: true
