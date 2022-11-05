@@ -224,9 +224,6 @@ jobs:
           ls -la ~/Library/Developer/CoreSimulator/Devices/*/data/Library/Caches/com.apple.dt.xctest.tool || true
           ls -la ~/Library/Developer/CoreSimulator/Devices/*/data/Library/Caches/com.apple.dt.xctest.tool/screenshots || true
 
-          # store a zip of the screenshots in staging
-          ditto -c -k --keepParent ~/Library/Developer/CoreSimulator/Devices/*/data/Library/Caches/com.apple.dt.xctest.tool/screenshots staging/${FAIR_APP_ARTIFACT}-iOS-screenshots.zip
-
           # Copy the screenshots to the docs/ folder
           # rm -rf docs/screenshots && mv ~/Library/Developer/CoreSimulator/Devices/*/data/Library/Caches/com.apple.dt.xctest.tool/screenshots docs/screenshots && ls -la docs/screenshots
 
@@ -239,6 +236,19 @@ jobs:
           echo "Creating release: ${GITHUB_REF#refs/tags/}"
           # create a pre-release if it doesn't already exist 
           gh release create "${GITHUB_REF#refs/tags/}" --prerelease --title "Release ${GITHUB_REF#refs/tags/}" --generate-notes || true
+
+      - name: "Upload iOS Screenshots"
+        if: steps.platforms.outputs.ios == 'enabled' && startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # create a zip of the screenshots in staging
+          ditto -c -k --keepParent ~/Library/Developer/CoreSimulator/Devices/*/data/Library/Caches/com.apple.dt.xctest.tool/screenshots "${FAIR_APP_ARTIFACT}-iOS-screenshots.zip"
+
+          ls -lah "${FAIR_APP_ARTIFACT}-iOS-screenshots.zip"
+
+          # upload staging assets to the existing GitHub release
+          gh release upload "${GITHUB_REF#refs/tags/}" -- "${FAIR_APP_ARTIFACT}-iOS-screenshots.zip"
 
       - name: "Archive iOS App"
         if: steps.platforms.outputs.ios == 'enabled'
@@ -704,7 +714,8 @@ jobs:
 
           # set some default review metadata
           echo "https://${HUB_REPO}/${ORGNAME}/App/discussions" > fastlane/metadata/support_url.txt
-          echo "https://${ORGNAME}.${HUB_PAGE}/App" > fastlane/metadata/marketing_url.txt
+          #echo "https://${ORGNAME}.${HUB_PAGE}/App" > fastlane/metadata/marketing_url.txt
+          echo "https://${ORGNAME}.appfair.net" > fastlane/metadata/marketing_url.txt
 
           # fetch the screenshots zip and unpack
           curl -fsSL -O "https://${HUB_REPO}/${ORGNAME}/App/releases/download/${{ steps.get_semver_tag.outputs.semver_tag }}/${FAIR_APP_ARTIFACT}-iOS-screenshots.zip" 
