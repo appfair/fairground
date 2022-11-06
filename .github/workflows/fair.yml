@@ -642,10 +642,6 @@ jobs:
           cat > fastlane/Fastfile << EOF
           opt_out_usage
 
-          lane :setup_ci do
-            # perform any CI-specific actions here
-          end
-
           lane :setup do
             setup_ci if ENV['CI']
             app_store_connect_api_key({
