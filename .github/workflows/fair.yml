@@ -42,7 +42,7 @@ env:
   # fairtool-head will build from source, which adds a few minutes
   #FAIRTOOL: "fairtool-head"
 
-  DEVELOPER_DIR: /Applications/Xcode_14.0.1.app/Contents/Developer
+  DEVELOPER_DIR: /Applications/Xcode_14.1.app/Contents/Developer
 
 on:
   workflow_call:
@@ -170,8 +170,9 @@ jobs:
           cat buildsettings.json | jq .
 
           echo "APP_VERSION="$(cat buildsettings.json | jq -r '.[].buildSettings.MARKETING_VERSION') >> $GITHUB_ENV
+          echo "APP_BUILD_NUMBER="$(cat buildsettings.json | jq -r '.[].buildSettings.CURRENT_PROJECT_VERSION') >> $GITHUB_ENV
 
-      - name: "Prepare App: ${{ env.ORGNAME }} ${{ env.APP_VERSION }}"
+      - name: "Prepare App: ${{ env.ORGNAME }} ${{ env.APP_VERSION }} ${{ env.APP_BUILD_NUMBER }}"
         run: |
           # needed to be able to ad-hoc codesign embedded frameworks
           plutil -replace 'com\.apple\.security\.cs\.disable-library-validation' -bool true sandbox-macos.entitlements
@@ -460,6 +461,7 @@ jobs:
           xcodebuild -quiet -workspace "ReleasePR/App.xcworkspace" -showBuildSettings -json -scheme "${APP_TARGET}" archive 2> /dev/null > buildsettings.json
           cat buildsettings.json | jq .
           echo "APP_VERSION="$(cat buildsettings.json | jq -r '.[].buildSettings.MARKETING_VERSION') >> $GITHUB_ENV
+          echo "APP_BUILD_NUMBER="$(cat buildsettings.json | jq -r '.[].buildSettings.CURRENT_PROJECT_VERSION') >> $GITHUB_ENV
 
       #- name: Verify workflow integrity
       # the workflows must be identical; fetch & merge upstream if this fails
@@ -472,7 +474,7 @@ jobs:
           brew install fair-ground/tool/$FAIRTOOL
           $FAIRTOOL version
 
-      - name: "Validate Release ${{ env.APP_VERSION }}"
+      - name: "Validate Release ${{ env.APP_VERSION }} ${{ env.APP_BUILD_NUMBER }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -573,7 +575,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
         run: |
           # build the URL for the GitHub download artifact
-          IPAURL="https://${HUB_REPO}/${ORGNAME}/App/releases/download/${{ env.APP_VERSION }}/${FAIR_APP_ARTIFACT}-iOS.ipa" 
+          IPAURL="https://${HUB_REPO}/${ORGNAME}/App/releases/download/${APP_VERSION}/${FAIR_APP_ARTIFACT}-iOS.ipa" 
 
           echo "Generating fairseal for: $IPAURL"
 
@@ -593,7 +595,7 @@ jobs:
             --untrusted-artifact "staging/untrusted/${FAIR_APP_ARTIFACT}-iOS.ipa" \
             --disassembler=/usr/bin/otool \
             --permitted-diffs 0 \
-            --retry-duration 1800 \
+            --retry-duration 3600 \
             --artifact-url "$IPAURL" \
             --artifact-staging "staging/" \
             --fair-properties "$FAIRGROUND.xcconfig" \
@@ -727,7 +729,7 @@ jobs:
           echo "https://${ORGNAME}.appfair.net" > fastlane/metadata/marketing_url.txt
 
           # fetch the screenshots zip and unpack
-          curl -fsSL -O "https://${HUB_REPO}/${ORGNAME}/App/releases/download/${{ env.APP_VERSION }}/${FAIR_APP_ARTIFACT}-iOS-screenshots.zip" 
+          curl -fsSL -O "https://${HUB_REPO}/${ORGNAME}/App/releases/download/${APP_VERSION}/${FAIR_APP_ARTIFACT}-iOS-screenshots.zip" 
           unzip "${FAIR_APP_ARTIFACT}-iOS-screenshots.zip" -d fastlane/
           ls -la fastlane/
           ls -la fastlane/screenshots/
@@ -867,7 +869,7 @@ jobs:
 
         run: |
           # build the URL for the GitHub download artifact
-          ZIPURL="https://${HUB_REPO}/${ORGNAME}/App/releases/download/${{ env.APP_VERSION }}/${FAIR_APP_ARTIFACT}-macOS.zip" 
+          ZIPURL="https://${HUB_REPO}/${ORGNAME}/App/releases/download/${APP_VERSION}/${FAIR_APP_ARTIFACT}-macOS.zip" 
 
           echo "Generating fairseal for: $ZIPURL"
 
@@ -893,7 +895,7 @@ jobs:
             --untrusted-artifact "staging/untrusted/${FAIR_APP_ARTIFACT}-macOS.zip" \
             --disassembler=/usr/bin/otool \
             --permitted-diffs 0 \
-            --retry-duration 1800 \
+            --retry-duration 3600 \
             --artifact-url "$ZIPURL" \
             --artifact-staging "staging/" \
             --fair-properties "$FAIRGROUND.xcconfig" \
