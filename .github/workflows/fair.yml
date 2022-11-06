@@ -681,7 +681,7 @@ jobs:
               overwrite_screenshots: true,
               sync_screenshots: true,
               submit_for_review: false,
-              skip_screenshots: true,
+              skip_screenshots: false,
               #skip_screenshots: false,
               skip_metadata: false,
               ignore_language_directory_validation: false,
@@ -730,6 +730,12 @@ jobs:
           ls -la fastlane/
           ls -la fastlane/screenshots/
           du -skh fastlane/screenshots/
+
+          # remove the symbolic links to the other screenshots,
+          # which is how identical shots are identified in the zip.
+          # If we don't clear them out, then the fastlane upload times out.
+          echo "Clearing linked localized screenshots"
+          find fastlane/screenshots/ -type l -exec rm -v {} \;
 
           mkdir -p fastlane/metadata/review_information
           echo "App" > fastlane/metadata/review_information/first_name.txt
