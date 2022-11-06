@@ -161,8 +161,8 @@ jobs:
 
       - name: "Configure Fork: ${{ env.APPNAME }}"
         run: |
-          echo "PRODUCT_NAME=$(echo ${{ env.APPNAME }} | tr '-' ' ')" >> $GITHUB_ENV
           echo "FAIR_APP_ARTIFACT=${{ env.APPNAME }}" >> $GITHUB_ENV
+          echo "PRODUCT_NAME=$(echo ${{ env.APPNAME }} | tr '-' ' ')" >> $GITHUB_ENV
           echo "BUNDLE_ID=app.$(echo ${{ env.APPNAME }})" >> $GITHUB_ENV
 
           xcodebuild -quiet -workspace "App.xcworkspace" -showBuildSettings -json -scheme "${APP_TARGET}" archive 2> /dev/null > buildsettings.json
@@ -183,7 +183,7 @@ jobs:
           brew install fair-ground/tool/$FAIRTOOL
           $FAIRTOOL version
 
-      - name: "Validate Project with ${{ env.FAIRTOOL }}"
+      - name: "Validate ${{ env.APPNAME }} ${{ env.APP_VERSION }} (${{ env.APP_BUILD_NUMBER }})"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -475,18 +475,13 @@ jobs:
           brew install fair-ground/tool/$FAIRTOOL
           $FAIRTOOL version
 
-      - name: "Validate Release ${{ env.APP_VERSION }} ${{ env.APP_BUILD_NUMBER }}"
+      - name: "Validate ${{ env.ORGNAME }} ${{ env.APP_VERSION }} (${{ env.APP_BUILD_NUMBER }})"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $FAIRTOOL fair validate --base .  --project ReleasePR --hub "${HUB_REPO}/${{ inputs.fairground }}" --base-repo "App" --org "${ORGNAME}" --ref "${COMMITHASH}" --integration-title "${PRTITLE}" --fair-properties "$FAIRGROUND.xcconfig" --fairseal-issuer "${{ inputs.fairseal_issuer }}" --fairseal-key "${{ secrets.APP_FAIR_FAIRSEAL_KEY }}" --allow-name "${{ secrets.APP_FAIR_ALLOW_NAME }}" --deny-name "${{ secrets.APP_FAIR_DENY_NAME }}" --allow-from "${{ secrets.APP_FAIR_ALLOW_FROM }}" --deny-from "${{ secrets.APP_FAIR_DENY_FROM }}" --verbose
 
           mkdir staging/
-
-      - name: "Update App: ${{ env.ORGNAME }}"
-        run: |
-          # needed to be able to ad-hoc codesign embedded frameworks
-          plutil -replace 'com\.apple\.security\.cs\.disable-library-validation' -bool true ReleasePR/sandbox-macos.entitlements
 
       - name: "Resolve Swift Packages"
         run: |
@@ -548,8 +543,7 @@ jobs:
           # or true is there is case of directories
           #shasum -a 256 staging/*.*
 
-
-      - name: "Build iOS App"
+      - name: "Archive iOS App"
         if: steps.platforms.outputs.ios == 'enabled'
         run: |
           set -o pipefail && env NSUnbufferedIO=YES \
@@ -816,9 +810,12 @@ jobs:
           #cp $FAIRGROUND.xcconfig $FAIRGROUND.xcconfig.clean
           #mv $FAIRGROUND.xcconfig.clean $FAIRGROUND.xcconfig
 
-      - name: "Build macOS App"
+      - name: "Archive macOS App"
         if: steps.platforms.outputs.macos == 'enabled'
         run: |
+          # needed to be able to ad-hoc codesign embedded frameworks
+          plutil -replace 'com\.apple\.security\.cs\.disable-library-validation' -bool true ReleasePR/sandbox-macos.entitlements
+
           set -o pipefail && env NSUnbufferedIO=YES \
           xcodebuild archive \
             -workspace "App.xcworkspace" \
