@@ -591,7 +591,7 @@ jobs:
             --untrusted-artifact "staging/untrusted/${FAIR_APP_ARTIFACT}-iOS.ipa" \
             --disassembler=/usr/bin/otool \
             --permitted-diffs 0 \
-            --retry-duration 1800 \
+            --retry-duration 3600 \
             --artifact-url "$IPAURL" \
             --artifact-staging "staging/" \
             --fair-properties "$FAIRGROUND.xcconfig" \
@@ -885,7 +885,7 @@ jobs:
             --untrusted-artifact "staging/untrusted/${FAIR_APP_ARTIFACT}-macOS.zip" \
             --disassembler=/usr/bin/otool \
             --permitted-diffs 0 \
-            --retry-duration 1800 \
+            --retry-duration 3600 \
             --artifact-url "$ZIPURL" \
             --artifact-staging "staging/" \
             --fair-properties "$FAIRGROUND.xcconfig" \
