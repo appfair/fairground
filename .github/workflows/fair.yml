@@ -153,32 +153,31 @@ jobs:
           echo "APPNAME=$(echo ${{ github.repository_owner }} | sed 's;^${{ env.FAIRGROUND }}$;App-Name;g')" >> $GITHUB_ENV
           echo "COMMITHASH=${{ github.sha }}" >> $GITHUB_ENV
 
-      - name: "Configure Fork: ${{ env.APPNAME }}"
-        run: |
-          echo "PRODUCT_NAME=$(echo ${{ env.APPNAME }} | tr '-' ' ')" >> $GITHUB_ENV
-          echo "FAIR_APP_ARTIFACT=${{ env.APPNAME }}" >> $GITHUB_ENV
-          echo "BUNDLE_ID=app.$(echo ${{ env.APPNAME }})" >> $GITHUB_ENV
-
       - name: Checkout
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
           ref: ${{ github.ref }}
 
-      - name: "Check Version: ${{ steps.get_semver_tag.outputs.semver_tag }}"
-        id: get_semver_tag
-        run: echo ::set-output name=semver_tag::$(xcodebuild -quiet -workspace ReleasePR/App.xcworkspace -showBuildSettings -json -scheme "${APP_TARGET}" archive 2> /dev/null | jq -r '.[].buildSettings.MARKETING_VERSION')
+      - name: "Configure Fork: ${{ env.APPNAME }}"
+        run: |
+          echo "PRODUCT_NAME=$(echo ${{ env.APPNAME }} | tr '-' ' ')" >> $GITHUB_ENV
+          echo "FAIR_APP_ARTIFACT=${{ env.APPNAME }}" >> $GITHUB_ENV
+          echo "BUNDLE_ID=app.$(echo ${{ env.APPNAME }})" >> $GITHUB_ENV
 
-      - name: "Prepare App: ${{ env.ORGNAME }}"
+          xcodebuild -quiet -workspace "App.xcworkspace" -showBuildSettings -json -scheme "${APP_TARGET}" archive 2> /dev/null > buildsettings.json
+
+          cat buildsettings.json | jq .
+
+          echo "APP_VERSION="$(cat buildsettings.json | jq -r '.[].buildSettings.MARKETING_VERSION') >> $GITHUB_ENV
+
+      - name: "Prepare App: ${{ env.ORGNAME }} ${{ env.APP_VERSION }}"
         run: |
           # needed to be able to ad-hoc codesign embedded frameworks
           plutil -replace 'com\.apple\.security\.cs\.disable-library-validation' -bool true sandbox-macos.entitlements
 
-      - name: "Configure Deployment Platforms"
-        id: platforms
-        run: |
-          echo "::set-output name=macos::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme $APP_TARGET archive 2>/dev/null | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'macosx' > /dev/null && echo enabled || echo disabled)"
-          echo "::set-output name=ios::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme $APP_TARGET archive 2>/dev/null | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'iphoneos' > /dev/null && echo enabled || echo disabled)"
+          echo "::set-output name=macos::$(cat buildsettings.json | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'macosx' > /dev/null && echo enabled || echo disabled)"
+          echo "::set-output name=ios::$(cat buildsettings.json | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'iphoneos' > /dev/null && echo enabled || echo disabled)"
 
       - name: "Install ${{ env.FAIRTOOL }}"
         run: |
@@ -268,8 +267,8 @@ jobs:
             FAIRAPP_PRODUCT_NAME="${PRODUCT_NAME}" \
             | xcpretty
 
-          cp -a "staging/.${{ env.FAIR_APP_ARTIFACT }}-iOS.xcarchive/Products/Applications" "staging/Payload"
-          ditto -c -k --sequesterRsrc --keepParent "staging/Payload" "${{ env.FAIR_APP_ARTIFACT }}-iOS.ipa"
+          cp -a "staging/.${FAIR_APP_ARTIFACT}-iOS.xcarchive/Products/Applications" "staging/Payload"
+          ditto -c -k --sequesterRsrc --keepParent "staging/Payload" "${FAIR_APP_ARTIFACT}-iOS.ipa"
 
       - name: "Upload iOS Release"
         if: steps.platforms.outputs.ios == 'enabled' && startsWith(github.ref, 'refs/tags/')
@@ -322,28 +321,6 @@ jobs:
 
           # create the zip file
           ditto -c -k --sequesterRsrc --keepParent "staging/${PRODUCT_NAME}.app" "${FAIR_APP_ARTIFACT}-macOS.zip"
-
-      - name: "Upload Release Assets"
-        if: startsWith(github.ref, 'refs/tags/')
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        # Extract the Info.plist from the archives themselves, since they contain
-        # the same post-processed metadata that the app will use.
-        # Convert plists to XML for easier parsing.
-        run: |
-          cp Assets.xcassets/AppIcon.appiconset/appicon-iphone-60x60@3x.png staging/"${FAIR_APP_ARTIFACT}.png"
-          cp App.yml staging/
-          cp Info.plist staging/
-
-          ls -la staging/
-
-          echo "Uploading release assets: ${GITHUB_REF#refs/tags/}"
-
-          # log the checksum for each of the staging elements
-          openssl sha256 -- $(find staging -maxdepth 1 -type f)
-
-          # upload staging assets to the existing GitHub release
-          gh release upload "${GITHUB_REF#refs/tags/}" -- $(find staging -maxdepth 1 -type f)
 
       # Notarization is not required for the App Fair, but a developer
       # can opt to notarize their own build which will allow them to 
@@ -399,6 +376,29 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload "${GITHUB_REF#refs/tags/}" -- "${FAIR_APP_ARTIFACT}-macOS.zip"
+
+      - name: "Upload Release Assets"
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Extract the Info.plist from the archives themselves, since they contain
+        # the same post-processed metadata that the app will use.
+        # Convert plists to XML for easier parsing.
+        run: |
+          cp Assets.xcassets/AppIcon.appiconset/appicon-iphone-60x60@3x.png staging/"${FAIR_APP_ARTIFACT}.png"
+          cp App.yml staging/
+          cp Info.plist staging/
+
+          ls -la staging/
+
+          echo "Uploading release assets: ${GITHUB_REF#refs/tags/}"
+
+          # log the checksum for each of the staging elements
+          openssl sha256 -- $(find staging -maxdepth 1 -type f)
+
+          # upload staging assets to the existing GitHub release
+          gh release upload "${GITHUB_REF#refs/tags/}" -- $(find staging -maxdepth 1 -type f)
+
 
       - name: "Upload Build Artifacts"
         # upload the trusted artifacts for each build for reproducible-builds
@@ -456,8 +456,10 @@ jobs:
           submodules: false
 
       - name: "Check Version"
-        id: get_semver_tag
-        run: echo ::set-output name=semver_tag::$(xcodebuild -quiet -workspace ReleasePR/App.xcworkspace -showBuildSettings -json -scheme "${APP_TARGET}" archive 2> /dev/null | jq -r '.[].buildSettings.MARKETING_VERSION')
+        run: |
+          xcodebuild -quiet -workspace "ReleasePR/App.xcworkspace" -showBuildSettings -json -scheme "${APP_TARGET}" archive 2> /dev/null > buildsettings.json
+          cat buildsettings.json | jq .
+          echo "APP_VERSION="$(cat buildsettings.json | jq -r '.[].buildSettings.MARKETING_VERSION') >> $GITHUB_ENV
 
       #- name: Verify workflow integrity
       # the workflows must be identical; fetch & merge upstream if this fails
@@ -470,7 +472,7 @@ jobs:
           brew install fair-ground/tool/$FAIRTOOL
           $FAIRTOOL version
 
-      - name: "Validate Release ${{ steps.get_semver_tag.outputs.semver_tag }}"
+      - name: "Validate Release ${{ env.APP_VERSION }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -516,8 +518,8 @@ jobs:
       - name: "Configure Deployment Platforms"
         id: platforms
         run: |
-          echo "::set-output name=macos::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme $APP_TARGET archive 2>/dev/null | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'macosx' > /dev/null && echo enabled || echo disabled)"
-          echo "::set-output name=ios::$(xcodebuild -workspace App.xcworkspace -showBuildSettings -quiet -json -scheme $APP_TARGET archive 2>/dev/null | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'iphoneos' > /dev/null && echo enabled || echo disabled)"
+          echo "::set-output name=macos::$(cat buildsettings.json | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'macosx' > /dev/null && echo enabled || echo disabled)"
+          echo "::set-output name=ios::$(cat buildsettings.json | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'iphoneos' > /dev/null && echo enabled || echo disabled)"
 
       - name: "Stage Release Metadata"
         # copy over the un-processed assets from the ReleasePR/
@@ -571,7 +573,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
         run: |
           # build the URL for the GitHub download artifact
-          IPAURL="https://${HUB_REPO}/${ORGNAME}/App/releases/download/${{ steps.get_semver_tag.outputs.semver_tag }}/${FAIR_APP_ARTIFACT}-iOS.ipa" 
+          IPAURL="https://${HUB_REPO}/${ORGNAME}/App/releases/download/${{ env.APP_VERSION }}/${FAIR_APP_ARTIFACT}-iOS.ipa" 
 
           echo "Generating fairseal for: $IPAURL"
 
@@ -725,7 +727,7 @@ jobs:
           echo "https://${ORGNAME}.appfair.net" > fastlane/metadata/marketing_url.txt
 
           # fetch the screenshots zip and unpack
-          curl -fsSL -O "https://${HUB_REPO}/${ORGNAME}/App/releases/download/${{ steps.get_semver_tag.outputs.semver_tag }}/${FAIR_APP_ARTIFACT}-iOS-screenshots.zip" 
+          curl -fsSL -O "https://${HUB_REPO}/${ORGNAME}/App/releases/download/${{ env.APP_VERSION }}/${FAIR_APP_ARTIFACT}-iOS-screenshots.zip" 
           unzip "${FAIR_APP_ARTIFACT}-iOS-screenshots.zip" -d fastlane/
           ls -la fastlane/
           ls -la fastlane/screenshots/
@@ -865,7 +867,7 @@ jobs:
 
         run: |
           # build the URL for the GitHub download artifact
-          ZIPURL="https://${HUB_REPO}/${ORGNAME}/App/releases/download/${{ steps.get_semver_tag.outputs.semver_tag }}/${FAIR_APP_ARTIFACT}-macOS.zip" 
+          ZIPURL="https://${HUB_REPO}/${ORGNAME}/App/releases/download/${{ env.APP_VERSION }}/${FAIR_APP_ARTIFACT}-macOS.zip" 
 
           echo "Generating fairseal for: $ZIPURL"
 
