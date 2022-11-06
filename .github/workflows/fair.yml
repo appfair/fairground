@@ -172,13 +172,11 @@ jobs:
           echo "APP_VERSION="$(cat buildsettings.json | jq -r '.[].buildSettings.MARKETING_VERSION') >> $GITHUB_ENV
           echo "APP_BUILD_NUMBER="$(cat buildsettings.json | jq -r '.[].buildSettings.CURRENT_PROJECT_VERSION') >> $GITHUB_ENV
 
-      - name: "Prepare App: ${{ env.ORGNAME }} ${{ env.APP_VERSION }} ${{ env.APP_BUILD_NUMBER }}"
+      - name: "Configure Deployment Platforms"
+        id: platforms
         run: |
-          # needed to be able to ad-hoc codesign embedded frameworks
-          plutil -replace 'com\.apple\.security\.cs\.disable-library-validation' -bool true sandbox-macos.entitlements
-
-          echo "::set-output name=macos::$(cat buildsettings.json | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'macosx' > /dev/null && echo enabled || echo disabled)"
-          echo "::set-output name=ios::$(cat buildsettings.json | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'iphoneos' > /dev/null && echo enabled || echo disabled)"
+          echo "macos="$(cat buildsettings.json | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'macosx' > /dev/null && echo enabled || echo disabled) >> $GITHUB_OUTPUT
+          echo "ios="$(cat buildsettings.json | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'iphoneos' > /dev/null && echo enabled || echo disabled) >> $GITHUB_OUTPUT
 
       - name: "Install ${{ env.FAIRTOOL }}"
         run: |
@@ -288,6 +286,9 @@ jobs:
       - name: "Archive macOS App"
         if: steps.platforms.outputs.macos == 'enabled'
         run: |
+          # needed to be able to ad-hoc codesign embedded frameworks
+          plutil -replace 'com\.apple\.security\.cs\.disable-library-validation' -bool true sandbox-macos.entitlements
+
           set -o pipefail && env NSUnbufferedIO=YES \
           xcodebuild archive \
             -workspace "App.xcworkspace" \
@@ -520,8 +521,8 @@ jobs:
       - name: "Configure Deployment Platforms"
         id: platforms
         run: |
-          echo "::set-output name=macos::$(cat buildsettings.json | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'macosx' > /dev/null && echo enabled || echo disabled)"
-          echo "::set-output name=ios::$(cat buildsettings.json | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'iphoneos' > /dev/null && echo enabled || echo disabled)"
+          echo "macos="$(cat buildsettings.json | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'macosx' > /dev/null && echo enabled || echo disabled) >> $GITHUB_OUTPUT
+          echo "ios="$(cat buildsettings.json | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'iphoneos' > /dev/null && echo enabled || echo disabled) >> $GITHUB_OUTPUT
 
       - name: "Stage Release Metadata"
         # copy over the un-processed assets from the ReleasePR/
