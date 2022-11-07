@@ -142,7 +142,7 @@ jobs:
     #if: github.repository_owner != 'appfair' && github.event_name != 'pull_request_target'
     if: github.event_name != 'pull_request_target'
     runs-on: macos-12
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - name: "Initialize fair-ground"
         env:
@@ -418,7 +418,7 @@ jobs:
     name: "Integrate Release"
     if: github.repository_owner == 'appfair' && github.event_name == 'pull_request_target'
     runs-on: macos-12
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - name: "Initialize fair-ground"
         env:
