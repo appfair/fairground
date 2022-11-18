@@ -595,7 +595,8 @@ jobs:
             --artifact-staging "staging/" \
             --fair-properties "$FAIRGROUND.xcconfig" \
             --accent-color "Assets.xcassets/AccentColor.colorset/Contents.json" \
-            --project .
+            --project . \
+            --matadata "App.yml"
 
           mv -f staging/.artifact_stash/* staging/ || true # restore stash
 
@@ -894,7 +895,8 @@ jobs:
             --artifact-staging "staging/" \
             --fair-properties "$FAIRGROUND.xcconfig" \
             --accent-color "Assets.xcassets/AccentColor.colorset/Contents.json" \
-            --project .
+            --project . \
+            --matadata "App.yml"
 
           mv -f staging/.artifact_stash/* staging/ || true # restore stash
 
