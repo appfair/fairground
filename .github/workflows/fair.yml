@@ -240,8 +240,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          cp -a ~/Library/Developer/CoreSimulator/Devices/*/data/Library/Caches/com.apple.dt.xctest.tool/screenshots staging/screenshots || mkdir -p staging/screenshots
           # create a zip of the screenshots in staging
-          ditto -c -k --keepParent ~/Library/Developer/CoreSimulator/Devices/*/data/Library/Caches/com.apple.dt.xctest.tool/screenshots "${FAIR_APP_ARTIFACT}-iOS-screenshots.zip"
+          ditto -c -k --keepParent staging/screenshots "${FAIR_APP_ARTIFACT}-iOS-screenshots.zip"
 
           ls -lah "${FAIR_APP_ARTIFACT}-iOS-screenshots.zip"
 
