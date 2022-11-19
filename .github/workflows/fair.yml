@@ -722,7 +722,7 @@ jobs:
           echo "https://${ORGNAME}.appfair.net" > fastlane/metadata/marketing_url.txt
 
           # fetch the screenshots zip and unpack
-          curl -fsSL -O "https://${HUB_REPO}/${ORGNAME}/App/releases/download/${APP_VERSION}/${FAIR_APP_ARTIFACT}-iOS-screenshots.zip" 
+          curl -fvSL -O "https://${HUB_REPO}/${ORGNAME}/App/releases/download/${APP_VERSION}/${FAIR_APP_ARTIFACT}-iOS-screenshots.zip" 
           unzip "${FAIR_APP_ARTIFACT}-iOS-screenshots.zip" -d fastlane/
           ls -la fastlane/
           ls -la fastlane/screenshots/
