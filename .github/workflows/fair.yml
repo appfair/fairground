@@ -734,13 +734,17 @@ jobs:
           echo "Clearing linked localized screenshots"
           find fastlane/screenshots/ -type l -exec rm -v {} \;
 
-          mkdir -p fastlane/metadata/review_information
-          echo "App" > fastlane/metadata/review_information/first_name.txt
-          echo "Fair" > fastlane/metadata/review_information/last_name.txt
-          echo "appfair@appfair.org" > fastlane/metadata/review_information/email_address.txt
-          echo "+44 844 209 0611" > fastlane/metadata/review_information/phone_number.txt
+          $FAIRTOOL fair metadata \
+            --key "app" \
+            --override "first_name=App" \
+            --override "last_name=Fair" \
+            --override "email_address=appreview@appfair.org" \
+            --override "phone_number=+44 844 209 0611" \
+            --override "copyright=$(date +%Y) The App Fair Project and Contributors" \
+            --append "description=\n\nThis app is a free and open-source program developed through the App Fair Project by contributors from around the world and distributed under the Affero General Public License. Learn more at appfair.org." \
+            --append "fr-FR/description=\n\nCe app is a free and open-source program developed through the App Fair Project by contributors from around the world and distributed under the Affero General Public License. Learn more at appfair.org." \
+            --export fastlane/metadata App.yml
 
-          $FAIRTOOL fair metadata --export fastlane/metadata App.yml
           FASTLANE_ENABLE_BETA_DELIVER_SYNC_SCREENSHOTS=1 fastlane metadata
 
       - name: "PreFlight iOS"
