@@ -221,6 +221,7 @@ jobs:
           # check to ensure screenshots folders exists
           ls -la ~/Library/Developer/CoreSimulator/Devices/*/data/Library/Caches/com.apple.dt.xctest.tool || true
           ls -la ~/Library/Developer/CoreSimulator/Devices/*/data/Library/Caches/com.apple.dt.xctest.tool/screenshots || true
+          find ~/Library/Developer/CoreSimulator/Devices/*/data/Library/Caches/com.apple.dt.xctest.tool/screenshots -type f || true
 
           # Copy the screenshots to the docs/ folder
           # rm -rf docs/screenshots && mv ~/Library/Developer/CoreSimulator/Devices/*/data/Library/Caches/com.apple.dt.xctest.tool/screenshots docs/screenshots && ls -la docs/screenshots
@@ -727,6 +728,7 @@ jobs:
           ls -la fastlane/
           ls -la fastlane/screenshots/
           du -skh fastlane/screenshots/
+          find fastlane/screenshots/ -type f
 
           # remove the symbolic links to the other screenshots,
           # which is how identical shots are identified in the zip.
