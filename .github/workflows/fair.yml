@@ -738,6 +738,9 @@ jobs:
 
           $FAIRTOOL fair metadata \
             --key "app" \
+            --override "support_url=https://${HUB_REPO}/${ORGNAME}/App/issues" \
+            --override "marketing_url=https://${ORGNAME}.appfair.net" \
+            --override "privacy_url=https://www.appfair.net/privacy" \
             --override "first_name=App" \
             --override "last_name=Fair" \
             --override "email_address=appreview@appfair.org" \
