@@ -93,7 +93,7 @@ on:
         default: false
 
     secrets:
-      # Fork-Apply secrets
+      # Build App secrets
       NOTARY_TEAMID:
         required: false
       NOTARY_USERID:
@@ -105,7 +105,7 @@ on:
       NOTARY_CERTKEY_PASSWORD:
         required: false
 
-      # Integrate-Release secrets
+      # Replicate-Release secrets
       APP_FAIR_BOT_TOKEN:
         required: false
       APP_FAIR_ALLOW_NAME:
@@ -131,14 +131,14 @@ on:
         required: false
 
 jobs:
-  # The Fork-Apply phases run in the /App.git fork's repository.
+  # The Build App phases run in the /App.git fork's repository.
   # This workflow builds and validates the app, and if a semver tag 
   # tag is pushed, it will also create a release and publish the artifacts.
   # Released artifacts will only be published in the App Fair catalog
-  # once the Integrate-Release phases (below) are successfully run
+  # once the Replicate Release phases (below) are successfully run
   # and a fairseal is published.
-  fork_apply:
-    name: "Fork Apply"
+  build_app:
+    name: "Build App"
     #if: github.repository_owner != 'appfair' && github.event_name != 'pull_request_target'
     if: github.event_name != 'pull_request_target'
     runs-on: macos-12
@@ -412,12 +412,12 @@ jobs:
           path: staging
 
 
-  # The Integrate-Release phases run in the trusted base fairground.
+  # The Replicate Release phases run in the trusted base fairground.
   # This workflow validates and re-builds the app, and if the artifact hash
   # matches that of the public release, it will publish the fairseal
   # required for inclusion in the catalog.  
-  integrate_release:
-    name: "Integrate Release"
+  replicate_release:
+    name: "Replicate Release"
     if: github.repository_owner == 'appfair' && github.event_name == 'pull_request_target'
     runs-on: macos-12
     timeout-minutes: 120
@@ -491,7 +491,7 @@ jobs:
           cat Package.resolved
           cp Package.resolved Sources/App/Resources/
 
-      - name: "Integrate PR"
+      - name: "Replicate PR"
         env:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
         run: |
