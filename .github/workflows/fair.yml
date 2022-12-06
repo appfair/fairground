@@ -269,7 +269,14 @@ jobs:
             | xcpretty
 
           cp -a "staging/.${FAIR_APP_ARTIFACT}-iOS.xcarchive/Products/Applications" "staging/Payload"
+
+          # create the zip file with predictable timestamps
+          TAGDATE="$(git log -1 --format=%ad --date=iso-strict ${GITHUB_REF#refs/tags/})"
+          find "staging/Payload" -exec touch -d "${TAGDATE:0:19}" {} \;
           ditto -c -k --sequesterRsrc --keepParent "staging/Payload" "${FAIR_APP_ARTIFACT}-iOS.ipa"
+          ls -la "${FAIR_APP_ARTIFACT}-iOS.ipa"
+          shasum -a 256 "${FAIR_APP_ARTIFACT}-iOS.ipa"
+
 
       - name: "Upload iOS Release"
         if: steps.platforms.outputs.ios == 'enabled' && startsWith(github.ref, 'refs/tags/')
@@ -323,8 +330,12 @@ jobs:
           codesign -dv --verbose=5 "staging/${PRODUCT_NAME}.app"
           codesign -d --entitlements - "staging/${PRODUCT_NAME}.app"
 
-          # create the zip file
+          # create the zip file with predictable timestamps
+          TAGDATE="$(git log -1 --format=%ad --date=iso-strict ${GITHUB_REF#refs/tags/})"
+          find "staging/${PRODUCT_NAME}.app" -exec touch -d "${TAGDATE:0:19}" {} \;
           ditto -c -k --sequesterRsrc --keepParent "staging/${PRODUCT_NAME}.app" "${FAIR_APP_ARTIFACT}-macOS.zip"
+          ls -la "${FAIR_APP_ARTIFACT}-macOS.zip"
+          shasum -a 256 "${FAIR_APP_ARTIFACT}-macOS.zip"
 
       # Notarization is not required for the App Fair, but a developer
       # can opt to notarize their own build which will allow them to 
@@ -372,7 +383,13 @@ jobs:
           xcrun stapler staple "staging/${PRODUCT_NAME}.app"
 
           # re-create the archive with the signed & stapled artifact
+          # create the zip file with predictable timestamps
+          TAGDATE="$(git log -1 --format=%ad --date=iso-strict ${GITHUB_REF#refs/tags/})"
+          find "staging/${PRODUCT_NAME}.app" -exec touch -d "${TAGDATE:0:19}" {} \;
+
           ditto -c -k --sequesterRsrc --keepParent "staging/${PRODUCT_NAME}.app" "${FAIR_APP_ARTIFACT}-macOS.zip"
+          ls -la "${FAIR_APP_ARTIFACT}-macOS.zip"
+          shasum -a 256 "${FAIR_APP_ARTIFACT}-macOS.zip"
 
       - name: "Upload macOS Release"
         if: steps.platforms.outputs.macos == 'enabled' && startsWith(github.ref, 'refs/tags/')
@@ -564,7 +581,18 @@ jobs:
             | xcpretty
 
           cp -a "staging/.${FAIR_APP_ARTIFACT}-iOS.xcarchive/Products/Applications" "staging/Payload"
+
+          # create the zip file with predictable timestamps
+
+          # re-create the archive with the signed & stapled artifact
+          # create the zip file with predictable timestamps
+          TAGDATE="$(git log -1 --format=%ad --date=iso-strict ${GITHUB_REF#refs/tags/})"
+          find "staging/Payload" -exec touch -d "${TAGDATE:0:19}" {} \;
+
           ditto -c -k --sequesterRsrc --keepParent "staging/Payload" "staging/${FAIR_APP_ARTIFACT}-iOS.ipa"
+          ls -la "staging/${FAIR_APP_ARTIFACT}-iOS.ipa"
+          shasum -a 256 "staging/${FAIR_APP_ARTIFACT}-iOS.ipa"
+
 
       - name: "Replicate sealed iOS build"
         if: steps.platforms.outputs.ios == 'enabled'
@@ -856,6 +884,8 @@ jobs:
           codesign --verify --verbose=5 "staging/${PRODUCT_NAME}.app"
           codesign -dv --verbose=5 "staging/${PRODUCT_NAME}.app"
           codesign -d --entitlements - "staging/${PRODUCT_NAME}.app"
+
+
           ditto -c -k --sequesterRsrc --keepParent "staging/${PRODUCT_NAME}.app" "staging/${FAIR_APP_ARTIFACT}-macOS.zip"
 
           # show the binary checksum
@@ -911,7 +941,7 @@ jobs:
           mv -f staging/.artifact_stash/* staging/ || true # restore stash
 
       - name: "Close Pull Request"
-        # Pull Requests are always closed after the integrate-release phases.
+        # Pull Requests are always closed after the replicate-release phases.
         # Re-builds can be initiated by re-opening the PR or making a new one.
         if: always()
         env:
