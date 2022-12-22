@@ -469,6 +469,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh pr close --comment "Successfully initiated replication PR check for ${{ env.BUNDLE_ID }}." ${{ github.event.pull_request.html_url }}
 
+      - name: "Checkout Base Fairground"
+        uses: actions/checkout@v2
+
       - name: "Install fairtool formula"
         if: env.FAIRTOOL != 'swift run fairtool'
         run: brew install fair-ground/tool/$FAIRTOOL
@@ -484,9 +487,6 @@ jobs:
           if [ "${ORGNAME}" != "App-Fair" ]; then
             curl --location --fail -s "http://${ORGNAME}.appfair.net" | grep "$FAIRGROUND_LAUNCHPAD""${ORGNAME}"
           fi
-
-      - name: "Checkout Base Fairground"
-        uses: actions/checkout@v2
 
       - name: "Checkout Integration Pull Request"
         uses: actions/checkout@v2
