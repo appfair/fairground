@@ -671,7 +671,7 @@ jobs:
           security find-identity -v
 
           # if we have the public URL set then automatically distibute
-          if [ -z "${{ steps.preflight.outputs.appid }}" ]; then
+          if [ -z "${{ steps.preflight.outputs.appurl }}" ]; then
             FAIR_APP_DISTRIBUTE_EXTERNAL="false"
           else
             FAIR_APP_DISTRIBUTE_EXTERNAL="true"
