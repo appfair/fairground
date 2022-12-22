@@ -38,10 +38,12 @@ env:
   HUB_REPO: "github.com"
   HUB_PAGE: "github.io"
 
-  FAIRTOOL: "fairtool"
+  # installed from https://github.com/fair-ground/homebrew-tool release
+  #FAIRTOOL: "fairtool"
   # fairtool-head will build from source, which adds a few minutes
   #FAIRTOOL: "fairtool-head"
-  #FAIRTOOL: "swift run fairtool"
+  # swift run fairtool will build the fairtool from the App Package.swift source
+  FAIRTOOL: "swift run fairtool"
 
   DEVELOPER_DIR: /Applications/Xcode_14.1.app/Contents/Developer
 
@@ -180,6 +182,7 @@ jobs:
           echo "ios="$(cat buildsettings.json | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'iphoneos' > /dev/null && echo enabled || echo disabled) >> $GITHUB_OUTPUT
 
       - name: "Install ${{ env.FAIRTOOL }}"
+        if: env.FAIRTOOL != 'swift run fairtool'
         run: |
           brew install fair-ground/tool/$FAIRTOOL
           $FAIRTOOL version
