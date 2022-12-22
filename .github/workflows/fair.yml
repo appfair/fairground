@@ -640,6 +640,7 @@ jobs:
           echo "::set-output name=defined::true"
           # check the 'TESTFLIGHT_APP_ID' key in $FAIRGROUND.xcconfig
           echo "::set-output name=appid::$(cat App.yml | yq -r '.markets.testflight')"
+          echo "::set-output name=appurl::$(cat App.yml | yq -r '.markets.testflighturl')"
 
       - name: "Prepare PreFlight"
         if: steps.preflight.outputs.appid > 0
@@ -668,6 +669,13 @@ jobs:
 
           # show valid identities
           security find-identity -v
+
+          # if we have the public URL set then automatically distibute
+          if [ -z "${{ steps.preflight.outputs.appid }}" ]; then
+            FAIR_APP_DISTRIBUTE_EXTERNAL="false"
+          else
+            FAIR_APP_DISTRIBUTE_EXTERNAL="true"
+          fi
 
           mkdir -p fastlane/metadata/
 
@@ -727,10 +735,7 @@ jobs:
               skip_submission: false,
 
               skip_waiting_for_build_processing: false,
-              distribute_external: true,
-
-              #skip_waiting_for_build_processing: true,
-              #distribute_external: false,
+              distribute_external: ${FAIR_APP_DISTRIBUTE_EXTERNAL},
 
               changelog: "Bug fixes and performance improvements.",
               groups: [
