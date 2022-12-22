@@ -639,11 +639,11 @@ jobs:
         run: |
           echo "::set-output name=defined::true"
           # check the 'TESTFLIGHT_APP_ID' key in $FAIRGROUND.xcconfig
-          echo "::set-output name=appid::$(cat App.yml | yq -r '.markets.testflight')"
-          echo "::set-output name=appurl::$(cat App.yml | yq -r '.markets.testflighturl')"
+          echo "::set-output name=testflight::$(cat App.yml | yq -r '.markets.testflight')"
+          echo "::set-output name=testflighturl::$(cat App.yml | yq -r '.markets.testflighturl')"
 
       - name: "Prepare PreFlight"
-        if: steps.preflight.outputs.appid > 0
+        if: steps.preflight.outputs.testflight > 0
         env:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
           TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
@@ -671,7 +671,7 @@ jobs:
           security find-identity -v
 
           # if we have the public URL set then automatically distibute
-          if [ -z "${{ steps.preflight.outputs.appurl }}" ]; then
+          if [ -z "${{ steps.preflight.outputs.testflighturl }}" ]; then
             FAIR_APP_DISTRIBUTE_EXTERNAL="false"
           else
             FAIR_APP_DISTRIBUTE_EXTERNAL="true"
@@ -787,7 +787,7 @@ jobs:
           FASTLANE_ENABLE_BETA_DELIVER_SYNC_SCREENSHOTS=1 fastlane metadata
 
       - name: "PreFlight iOS"
-        if: steps.preflight.outputs.appid > 0
+        if: steps.preflight.outputs.testflight > 0
         env:
           GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_TOKEN }}
           TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
