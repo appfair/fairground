@@ -104,12 +104,6 @@ jobs:
         run: |
           echo "Creating release ${{env.BUNDLE_ID}} ${{ inputs.version }}"
 
-          # Update the appfair.xcconfig with the app name and version
-          ${{ env.FAIRTOOL }} app configure --name "${{ env.PRODUCT_NAME }}" --id "${{ env.BUNDLE_ID }}" --version "${{ inputs.version }}" --fair-properties "appfair.xcconfig"
-
-          # Update the app name in the README.md
-          sed -I "" 's;App-Name;${{ env.ORGNAME }};g' README.md
-
           SUPPORTED_PLATFORMS=""
           if [ "${{ inputs.build_macos }}" == "true" ]; then
             SUPPORTED_PLATFORMS="${SUPPORTED_PLATFORMS} macosx"
@@ -119,8 +113,12 @@ jobs:
           fi
 
           echo "Building SUPPORTED_PLATFORMS: ${SUPPORTED_PLATFORMS}"
-         
-          sed -I "" "s;^SUPPORTED_PLATFORMS[ ]*=.*;SUPPORTED_PLATFORMS =${SUPPORTED_PLATFORMS};g" appfair.xcconfig
+
+          # Update the appfair.xcconfig with the app name and version
+          ${{ env.FAIRTOOL }} app configure --name "${{ env.PRODUCT_NAME }}" --id "${{ env.BUNDLE_ID }}" --version "${{ inputs.version }}" --platforms "${SUPPORTED_PLATFORMS}" --fair-properties "appfair.xcconfig"
+
+          # Update the app name in the README.md
+          sed -I "" 's;App-Name;${{ env.ORGNAME }};g' README.md
 
           git config --global user.name 'fair-ground action'
           git config --global user.email 'fair-ground@users.noreply.github.com'
