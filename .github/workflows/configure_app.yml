@@ -105,7 +105,7 @@ jobs:
           echo "Creating release ${{env.BUNDLE_ID}} ${{ inputs.version }}"
 
           # Update the appfair.xcconfig with the app name and version
-          ${{ env.FAIRTOOL }} app configure --name "${{ env.PRODUCT_NAME }}" --id "${{ env.BUNDLE_ID }}" --version "${{ inputs.version }}" appfair.xcconfig
+          ${{ env.FAIRTOOL }} app configure --name "${{ env.PRODUCT_NAME }}" --id "${{ env.BUNDLE_ID }}" --version "${{ inputs.version }}" --fair-properties "appfair.xcconfig"
 
           # Update the app name in the README.md
           sed -I "" 's;App-Name;${{ env.ORGNAME }};g' README.md
