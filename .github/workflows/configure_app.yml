@@ -19,6 +19,7 @@
 # It will setup a new release with the specified version by tagging it
 # with the specified semantic release. 
 name: "Configure App Fair App"
+
 on:
   workflow_call:
     inputs:
@@ -37,6 +38,11 @@ on:
       build_macos:
         type: boolean
         required: true
+
+env:
+  FAIRTOOL: "fairtool"
+  #FAIRTOOL: "fairtool-head"
+  #FAIRTOOL: "swift run fairtool"
 
 jobs:
   configure:
@@ -92,19 +98,17 @@ jobs:
       - name: "Update App Configuration"
         run: |
           brew install fair-ground/tool/fairtool
-          fairtool app refresh
+          ${{ env.FAIRTOOL }} app refresh
 
       - name: "Configure: ${{env.BUNDLE_ID}} ${{ inputs.version }}"
         run: |
           echo "Creating release ${{env.BUNDLE_ID}} ${{ inputs.version }}"
 
+          # Update the appfair.xcconfig with the app name and version
+          ${{ env.FAIRTOOL }} app configure --name "${{ env.PRODUCT_NAME }}" --id "${{ env.BUNDLE_ID }}" --version "${{ inputs.version }}" appfair.xcconfig
+
           # Update the app name in the README.md
           sed -I "" 's;App-Name;${{ env.ORGNAME }};g' README.md
-
-          # Update the appfair.xcconfig with the app name and version
-          sed -I "" "s;^PRODUCT_NAME[ ]*=.*;PRODUCT_NAME = ${{ env.PRODUCT_NAME }};g" appfair.xcconfig
-          sed -I "" "s;^PRODUCT_BUNDLE_IDENTIFIER[ ]*=.*;PRODUCT_BUNDLE_IDENTIFIER = ${{ env.BUNDLE_ID }};g" appfair.xcconfig
-          sed -I "" "s;^MARKETING_VERSION[ ]*=.*;MARKETING_VERSION = ${{ inputs.version }};g" appfair.xcconfig
 
           SUPPORTED_PLATFORMS=""
           if [ "${{ inputs.build_macos }}" == "true" ]; then
