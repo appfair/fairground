@@ -162,6 +162,13 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.ref }}
 
+      - name: "Install fairtool formula"
+        if: env.FAIRTOOL != 'swift run fairtool'
+        run: brew install fair-ground/tool/$FAIRTOOL
+
+      - name: "Check ${{ env.FAIRTOOL }}"
+        run: $FAIRTOOL version
+
       - name: "Configure Fork: ${{ env.APP_NAME }}"
         run: |
           echo "FAIR_APP_ARTIFACT=${{ env.APP_NAME }}" >> $GITHUB_ENV
@@ -180,12 +187,6 @@ jobs:
         run: |
           echo "macos="$(cat buildsettings.json | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'macosx' > /dev/null && echo enabled || echo disabled) >> $GITHUB_OUTPUT
           echo "ios="$(cat buildsettings.json | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'iphoneos' > /dev/null && echo enabled || echo disabled) >> $GITHUB_OUTPUT
-
-      - name: "Install ${{ env.FAIRTOOL }}"
-        if: env.FAIRTOOL != 'swift run fairtool'
-        run: |
-          brew install fair-ground/tool/$FAIRTOOL
-          $FAIRTOOL version
 
       - name: "Validate ${{ env.APP_NAME }} ${{ env.APP_VERSION }} (${{ env.APP_BUILD_NUMBER }})"
         env:
@@ -460,6 +461,21 @@ jobs:
           echo "PRODUCT_NAME=$(echo ${{ env.ORGNAME }} | tr '-' ' ')" >> $GITHUB_ENV
           echo "BUNDLE_ID=app.$(echo ${{ env.ORGNAME }})" >> $GITHUB_ENV
 
+      - name: "Close Pull Request"
+        # Pull Requests are always immediately closed
+        # Re-builds can be initiated by re-opening the PR or making a new one.
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh pr close --comment "Successfully initiated replication PR check for ${{ env.BUNDLE_ID }}." ${{ github.event.pull_request.html_url }}
+
+      - name: "Install fairtool formula"
+        if: env.FAIRTOOL != 'swift run fairtool'
+        run: brew install fair-ground/tool/$FAIRTOOL
+
+      - name: "Check ${{ env.FAIRTOOL }}"
+        run: $FAIRTOOL version
+
       # Verifies that the project URLs are configured correctly
       - name: "Verify Project http://${{ env.ORGNAME }}.appfair.net"
         run: |
@@ -492,11 +508,6 @@ jobs:
       #run: |
       # workflows may not be modified
       #diff -r .github/workflows/ ReleasePR/.github/workflows/
-
-      - name: "Install ${{ env.FAIRTOOL }}"
-        run: |
-          brew install fair-ground/tool/$FAIRTOOL
-          $FAIRTOOL version
 
       - name: "Validate ${{ env.ORGNAME }} ${{ env.APP_VERSION }} (${{ env.APP_BUILD_NUMBER }})"
         env:
@@ -948,14 +959,6 @@ jobs:
             --metadata "App.yml"
 
           mv -f staging/.artifact_stash/* staging/ || true # restore stash
-
-      - name: "Close Pull Request"
-        # Pull Requests are always closed after the replicate-release phases.
-        # Re-builds can be initiated by re-opening the PR or making a new one.
-        if: always()
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh pr close ${{ github.event.pull_request.html_url }}
 
       - name: "Publish Catalog"
         env:
