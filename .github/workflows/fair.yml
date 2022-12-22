@@ -640,7 +640,7 @@ jobs:
           echo "::set-output name=defined::true"
           # check the 'TESTFLIGHT_APP_ID' key in $FAIRGROUND.xcconfig
           echo "::set-output name=testflight::$(cat App.yml | yq -r '.markets.testflight')"
-          echo "::set-output name=testflighturl::$(cat App.yml | yq -r '.markets.testflighturl')"
+          echo "::set-output name=testflighturl::$(cat App.yml | yq -r '.markets.testflighturl' | sed 's;^null$;;g')"
 
       - name: "Prepare PreFlight"
         if: steps.preflight.outputs.testflight > 0
