@@ -349,8 +349,8 @@ jobs:
         env:
             NOTARY_TEAMID: ${{ secrets.NOTARY_TEAMID }}
         if: env.NOTARY_TEAMID != '' && startsWith(github.ref, 'refs/tags/')
-        # transfer the secret to an env variable so it can be checked with `if`
-        run: echo "::set-output name=defined::true"
+        # set the defined variable so it can be checked with `if`
+        run: echo "defined=true" >> $GITHUB_OUTPUT
 
       - name: "Notarize App"
         if: steps.notarization_setup.outputs.defined == 'true'
@@ -644,10 +644,8 @@ jobs:
         env:
           TESTFLIGHT_TEAMID: ${{ secrets.TESTFLIGHT_TEAMID }}
         run: |
-          echo "::set-output name=defined::true"
-          # check the 'TESTFLIGHT_APP_ID' key in $FAIRGROUND.xcconfig
-          echo "::set-output name=testflight::$(cat App.yml | yq -r '.markets.testflight')"
-          echo "::set-output name=testflighturl::$(cat App.yml | yq -r '.markets.testflighturl' | sed 's;^null$;;g')"
+          echo "testflight=$(cat App.yml | yq -r '.markets.testflight')" >> $GITHUB_OUTPUT
+          echo "testflighturl=$(cat App.yml | yq -r '.markets.testflighturl')" >> $GITHUB_OUTPUT
 
       - name: "Prepare PreFlight"
         if: steps.preflight.outputs.testflight > 0
@@ -676,6 +674,8 @@ jobs:
 
           # show valid identities
           security find-identity -v
+
+          echo "Checking TestFlight config ${{ steps.preflight.outputs.testflight }} url: ${{ steps.preflight.outputs.testflighturl }}"
 
           # if we have the public URL set then automatically distibute
           if [ "${{ steps.preflight.outputs.testflighturl }}" = "null" ]; then
