@@ -172,9 +172,9 @@ jobs:
       - name: "Configure App: ${{ env.APP_NAME }}"
         id: platforms
         run: |
-          echo "FAIR_APP_ARTIFACT=${{ env.APP_NAME }}" >> $GITHUB_ENV
-
           $FAIRTOOL app configure -p . > .appconfig.json
+
+          echo "FAIR_APP_ARTIFACT=${{ env.APP_NAME }}" >> $GITHUB_ENV
 
           echo "PRODUCT_NAME="$(cat .appconfig.json | jq -r '.[].productName') >> $GITHUB_ENV
           echo "BUNDLE_ID="$(cat .appconfig.json | jq -r '.[].bundleIdentifier') >> $GITHUB_ENV
@@ -488,9 +488,9 @@ jobs:
       - name: "Configure Fork: ${{ env.ORGNAME }}"
         id: platforms
         run: |
-          echo "FAIR_APP_ARTIFACT=${{ env.ORGNAME }}" >> $GITHUB_ENV
-
           $FAIRTOOL app configure -p ReleasePR/ > .appconfig.json
+
+          echo "FAIR_APP_ARTIFACT=${{ env.ORGNAME }}" >> $GITHUB_ENV
 
           echo "PRODUCT_NAME="$(cat .appconfig.json | jq -r '.[].productName') >> $GITHUB_ENV
           echo "BUNDLE_ID="$(cat .appconfig.json | jq -r '.[].bundleIdentifier') >> $GITHUB_ENV
@@ -678,7 +678,7 @@ jobs:
           security find-identity -v
 
           # if we have the public URL set then automatically distibute
-          if [ -z "${{ steps.preflight.outputs.testflighturl }}" ]; then
+          if [ "${{ steps.preflight.outputs.testflighturl }}" = "null" ]; then
             FAIR_APP_DISTRIBUTE_EXTERNAL="false"
           else
             FAIR_APP_DISTRIBUTE_EXTERNAL="true"
