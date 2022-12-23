@@ -157,7 +157,7 @@ jobs:
           echo "COMMITHASH=${{ github.sha }}" >> $GITHUB_ENV
 
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
           ref: ${{ github.ref }}
@@ -169,24 +169,20 @@ jobs:
       - name: "Check ${{ env.FAIRTOOL }} version"
         run: $FAIRTOOL version
 
-      - name: "Configure Fork: ${{ env.APP_NAME }}"
-        run: |
-          echo "FAIR_APP_ARTIFACT=${{ env.APP_NAME }}" >> $GITHUB_ENV
-          echo "PRODUCT_NAME=$(echo ${{ env.APP_NAME }} | tr '-' ' ')" >> $GITHUB_ENV
-          echo "BUNDLE_ID=app.$(echo ${{ env.APP_NAME }})" >> $GITHUB_ENV
-
-          xcodebuild -quiet -workspace "App.xcworkspace" -showBuildSettings -json -scheme "${APP_TARGET}" archive 2> /dev/null > buildsettings.json
-
-          cat buildsettings.json | jq .
-
-          echo "APP_VERSION="$(cat buildsettings.json | jq -r '.[].buildSettings.MARKETING_VERSION') >> $GITHUB_ENV
-          echo "APP_BUILD_NUMBER="$(cat buildsettings.json | jq -r '.[].buildSettings.CURRENT_PROJECT_VERSION') >> $GITHUB_ENV
-
-      - name: "Configure Deployment Platforms"
+      - name: "Configure App: ${{ env.APP_NAME }}"
         id: platforms
         run: |
-          echo "macos="$(cat buildsettings.json | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'macosx' > /dev/null && echo enabled || echo disabled) >> $GITHUB_OUTPUT
-          echo "ios="$(cat buildsettings.json | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'iphoneos' > /dev/null && echo enabled || echo disabled) >> $GITHUB_OUTPUT
+          echo "FAIR_APP_ARTIFACT=${{ env.APP_NAME }}" >> $GITHUB_ENV
+
+          $FAIRTOOL app configure -p . > .appconfig.json
+
+          echo "PRODUCT_NAME="$(cat .appconfig.json | jq -r '.[].productName') >> $GITHUB_ENV
+          echo "BUNDLE_ID="$(cat .appconfig.json | jq -r '.[].bundleIdentifier') >> $GITHUB_ENV
+          echo "APP_VERSION="$(cat .appconfig.json | jq -r '.[].version') >> $GITHUB_ENV
+          echo "APP_BUILD_NUMBER="$(cat .appconfig.json | jq -r '.[].buildNumber') >> $GITHUB_ENV
+
+          echo "macos="$(cat .appconfig.json | jq -r '.[].supportedPlatforms' | grep 'macosx' > /dev/null && echo enabled || echo disabled) >> $GITHUB_OUTPUT
+          echo "ios="$(cat .appconfig.json | jq -r '.[].supportedPlatforms' | grep 'iphoneos' > /dev/null && echo enabled || echo disabled) >> $GITHUB_OUTPUT
 
       - name: "Validate ${{ env.APP_NAME }} ${{ env.APP_VERSION }} (${{ env.APP_BUILD_NUMBER }})"
         env:
@@ -455,22 +451,16 @@ jobs:
           echo "COMMITHASH=${{ github.event.pull_request.head.sha }}" >> $GITHUB_ENV
           echo "PRID=${{ github.event.pull_request.id }}" >> $GITHUB_ENV
 
-      - name: "Configure App: ${{ env.ORGNAME }}"
-        run: |
-          echo "FAIR_APP_ARTIFACT=${{ env.ORGNAME }}" >> $GITHUB_ENV
-          echo "PRODUCT_NAME=$(echo ${{ env.ORGNAME }} | tr '-' ' ')" >> $GITHUB_ENV
-          echo "BUNDLE_ID=app.$(echo ${{ env.ORGNAME }})" >> $GITHUB_ENV
-
       - name: "Close Pull Request"
         # Pull Requests are always immediately closed
         # Re-builds can be initiated by re-opening the PR or making a new one.
         if: always()
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh pr close --comment "Successfully initiated replication PR check for ${{ env.BUNDLE_ID }}." ${{ github.event.pull_request.html_url }}
+        run: gh pr close --comment "Integrating and publishing contribution ${{ github.event.pull_request.patch_url }} with workflow ${{ github.event.pull_request.base.repo.html_url }}/actions/runs/${{ github.run_id }}." ${{ github.event.pull_request.html_url }}
 
       - name: "Checkout Base Fairground"
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: "Install fairtool formula"
         if: env.FAIRTOOL != 'swift run fairtool'
@@ -489,19 +479,27 @@ jobs:
           fi
 
       - name: "Checkout Integration Pull Request"
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           path: ReleasePR
           ref: ${{ env.COMMITHASH }}
           fetch-depth: 0
-          submodules: false
 
-      - name: "Check Version"
+      - name: "Configure Fork: ${{ env.ORGNAME }}"
+        id: platforms
         run: |
-          xcodebuild -quiet -workspace "ReleasePR/App.xcworkspace" -showBuildSettings -json -scheme "${APP_TARGET}" archive 2> /dev/null > buildsettings.json
-          cat buildsettings.json | jq .
-          echo "APP_VERSION="$(cat buildsettings.json | jq -r '.[].buildSettings.MARKETING_VERSION') >> $GITHUB_ENV
-          echo "APP_BUILD_NUMBER="$(cat buildsettings.json | jq -r '.[].buildSettings.CURRENT_PROJECT_VERSION') >> $GITHUB_ENV
+          echo "FAIR_APP_ARTIFACT=${{ env.ORGNAME }}" >> $GITHUB_ENV
+
+          $FAIRTOOL app configure -p ReleasePR/ > .appconfig.json
+
+          echo "PRODUCT_NAME="$(cat .appconfig.json | jq -r '.[].productName') >> $GITHUB_ENV
+          echo "BUNDLE_ID="$(cat .appconfig.json | jq -r '.[].bundleIdentifier') >> $GITHUB_ENV
+          echo "APP_VERSION="$(cat .appconfig.json | jq -r '.[].version') >> $GITHUB_ENV
+          echo "APP_BUILD_NUMBER="$(cat .appconfig.json | jq -r '.[].buildNumber') >> $GITHUB_ENV
+
+          echo "macos="$(cat .appconfig.json | jq -r '.[].supportedPlatforms' | grep 'macosx' > /dev/null && echo enabled || echo disabled) >> $GITHUB_OUTPUT
+          echo "ios="$(cat .appconfig.json | jq -r '.[].supportedPlatforms' | grep 'iphoneos' > /dev/null && echo enabled || echo disabled) >> $GITHUB_OUTPUT
+
 
       #- name: Verify workflow integrity
       # the workflows must be identical; fetch & merge upstream if this fails
@@ -546,12 +544,6 @@ jobs:
 
           $FAIRTOOL app refresh
           $FAIRTOOL fair icon --org "${ORGNAME}" --fair-properties "$FAIRGROUND.xcconfig" --accent-color Assets.xcassets/AccentColor.colorset/Contents.json --app-icon Assets.xcassets/AppIcon.appiconset/Contents.json
-
-      - name: "Configure Deployment Platforms"
-        id: platforms
-        run: |
-          echo "macos="$(cat buildsettings.json | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'macosx' > /dev/null && echo enabled || echo disabled) >> $GITHUB_OUTPUT
-          echo "ios="$(cat buildsettings.json | jq '.[].buildSettings.SUPPORTED_PLATFORMS' | grep 'iphoneos' > /dev/null && echo enabled || echo disabled) >> $GITHUB_OUTPUT
 
       - name: "Stage Release Metadata"
         # copy over the un-processed assets from the ReleasePR/
