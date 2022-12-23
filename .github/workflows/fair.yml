@@ -677,11 +677,11 @@ jobs:
 
           echo "Checking TestFlight config ${{ steps.preflight.outputs.testflight }} url: ${{ steps.preflight.outputs.testflighturl }}"
 
-          # if we have the public URL set then automatically distibute
+          # if we have the public URL set then automatically submit for review
           if [ "${{ steps.preflight.outputs.testflighturl }}" = "null" ]; then
-            FAIR_APP_DISTRIBUTE_EXTERNAL="false"
+            SKIP_SUBMISSION="true"
           else
-            FAIR_APP_DISTRIBUTE_EXTERNAL="true"
+            SKIP_SUBMISSION="false"
           fi
 
           mkdir -p fastlane/metadata/
@@ -739,10 +739,10 @@ jobs:
             #metadata
             upload_to_testflight({
               ipa: "staging/rebundled/${FAIR_APP_ARTIFACT}-iOS.ipa",
-              skip_submission: false,
+              skip_submission: ${SKIP_SUBMISSION},
 
               skip_waiting_for_build_processing: false,
-              distribute_external: ${FAIR_APP_DISTRIBUTE_EXTERNAL},
+              distribute_external: true,
 
               changelog: "Bug fixes and performance improvements.",
               groups: [
