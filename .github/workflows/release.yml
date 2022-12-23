@@ -1,0 +1,116 @@
+##############################################################################
+#
+#    This program is free software: you can redistribute it and/or modify
+#    it under the terms of the GNU Affero General Public License as
+#    published by the Free Software Foundation, either version 3 of the
+#    License, or (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU Affero General Public License for more details.
+#
+#    You should have received a copy of the GNU Affero General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
+##############################################################################
+
+# This workflow is run in a fork of https://www.github.com/FAIR-GROUND/App.git
+# It will create a release PR for the given app.
+name: "Release App Fair App"
+
+on:
+  workflow_call:
+    inputs:
+      # the name of the fairground organization (e.g., "appfair")
+      fairground:
+        type: string
+        default: appfair
+        required: false
+      # the semver tag to use to create the release
+      version:
+        type: string
+        required: true
+      build_ios:
+        type: boolean
+        required: true
+      build_macos:
+        type: boolean
+        required: true
+
+name: "Release App"
+# Release App creates a release of the app and issues a release PR.
+#
+# See: https://www.appfair.net
+on: 
+  workflow_dispatch:
+    inputs:
+      bump_major:
+        type: boolean
+        description: 'Bump Version Major'
+        required: false
+        default: false
+      bump_minor:
+        type: boolean
+        description: 'Bump Version Minor'
+        required: false
+        default: false
+      bump_patch:
+        type: boolean
+        description: 'Bump Version Patch'
+        required: false
+        default: false
+      version:
+        type: string
+        description: 'Set Specific App Version'
+        required: false
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GITHUB_TOKEN: ${{ secrets.APP_FAIR_BOT_SLA_TOKEN }}
+
+    steps:
+      - name: Get swift version
+        run: swift --version 
+
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+            token: ${{ env.GITHUB_TOKEN }}
+
+      - name: Setup git
+        run: |
+          git config --global user.name 'appfairbot'
+          git config --global user.email 'appfairbot@appfair.net'
+
+      - name: Run fairtool
+        run: swift run fairtool version
+
+      - name: Bump release
+        run: |
+          # update the appfair.xcconfig with a new patch version
+          swift run fairtool app configure -J --bump patch > /tmp/fairv.json
+
+          # show configuration
+          cat /tmp/fairv.json | jq .
+
+          # extract build configuration variables from output
+          APPNAME=`cat /tmp/fairv.json | jq -re '.productName'`
+          APPID=`cat /tmp/fairv.json | jq -re '.bundleIdentifier'`
+          TAGNAME=`cat /tmp/fairv.json | jq -re '.version'`
+
+          # Push a semver tag to trigger a release of
+          # https://github.com/Silly-Little-App/App.git
+          git add appfair.xcconfig
+          git commit -m "Auto-release ${TAGNAME}"
+          git tag -a "${TAGNAME}" -m "Release ${TAGNAME}"
+          git push --follow-tags
+
+          # Create a pull request for https://github.com/appfair/App.git
+          # to trigger the integration and distribution
+          gh pr create --repo appfair/App --title "${APPNAME} ${TAGNAME}" --body "Auto-release ${TAGNAME}"
+
+
