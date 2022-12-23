@@ -628,6 +628,7 @@ jobs:
             --verbose \
             --hub "${HUB_REPO}/${{ inputs.fairground }}" \
             --base-repo "App" \
+            --post-issue "${{ github.event.number }}" \
             --token "${{ secrets.APP_FAIR_BOT_TOKEN }}" \
             --org "${ORGNAME}" \
             --fairseal-key "${{ secrets.APP_FAIR_FAIRSEAL_KEY }}" \
@@ -934,8 +935,8 @@ jobs:
           mv -f staging/*.ipa staging/.artifact_stash/ || true # don't seal the ipa when sealing macOS
 
 
-          # if the seals match, we indicate success by publishing
-          # the SHA256 for the release's pull request;
+          # if the builds match, we indicate success by publishing the 
+          # "fairseal" manifest as a comment on the release's pull request;
           # client apps will use this hash to verify that the untrusted
           # release artifact that is downloaded matches the release
           # artifact that was created in the trusted environment
@@ -943,6 +944,7 @@ jobs:
             --verbose \
             --hub "${HUB_REPO}/${{ inputs.fairground }}" \
             --base-repo "App" \
+            --post-issue "${{ github.event.number }}" \
             --token "${{ secrets.APP_FAIR_BOT_TOKEN }}" \
             --org "${ORGNAME}" \
             --fairseal-key "${{ secrets.APP_FAIR_FAIRSEAL_KEY }}" \
