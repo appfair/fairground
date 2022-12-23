@@ -424,7 +424,7 @@ jobs:
 
       - name: "Upload Build Artifacts"
         # upload the trusted artifacts for each build for reproducible-builds
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: always()
         with:
           path: staging
@@ -962,7 +962,7 @@ jobs:
 
       - name: "Upload Build Artifacts"
         # upload the trusted artifacts for each build for reproducible-builds
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         if: always()
         with:
           path: staging
