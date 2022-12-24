@@ -36,7 +36,7 @@ on:
         type: boolean
         description: 'Bump patch version'
         required: false
-        default: true
+        default: false
       version:
         type: string
         description: 'Set specific version'
@@ -83,14 +83,17 @@ jobs:
       - name: Bump release
         run: |
           # update the appfair.xcconfig with a new version
-          if [ "${{ inputs.bump_major }}" = "true" ]; then
-            swift run fairtool app configure --bump major 
-          fi
+
+          #if [ "${{ inputs.bump_patch }}" = "true" ]; then
+          # regardless of other bumps, we always at least bump the patch release
+          swift run fairtool app configure --bump patch 
+          #fi
+
           if [ "${{ inputs.bump_minor }}" = "true" ]; then
             swift run fairtool app configure --bump minor 
           fi
-          if [ "${{ inputs.bump_patch }}" = "true" ]; then
-            swift run fairtool app configure --bump patch 
+          if [ "${{ inputs.bump_major }}" = "true" ]; then
+            swift run fairtool app configure --bump major 
           fi
           if [ "${{ inputs.version }}" != "" ]; then
             swift run fairtool app configure --version "${{ inputs.version }}" 
