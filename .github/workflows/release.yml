@@ -43,8 +43,6 @@ on:
         required: false
     secrets:
       token:
-        type: string
-        description: 'The GITHUB_TOKEN for the action'
         required: true
 
 permissions:
