@@ -70,15 +70,29 @@ jobs:
 
       - name: Setup git
         run: |
-          git config --global user.name 'fair-ground action'
+          git config --global user.name '${{ github.actor }}'
+          git config --global user.email '${{ github.actor }}@users.noreply.github.com'
 
       - name: Run fairtool
         run: swift run fairtool version
 
       - name: Bump release
         run: |
-          # update the appfair.xcconfig with a new patch version
-          swift run fairtool app configure -J --bump patch > /tmp/fairv.json
+          # update the appfair.xcconfig with a new version
+          if [ "${{ inputs.bump_major }}" = "true" ]; then
+            swift run fairtool app configure --bump major 
+          fi
+          if [ "${{ inputs.bump_minor }}" = "true" ]; then
+            swift run fairtool app configure --bump minor 
+          fi
+          if [ "${{ inputs.bump_patch }}" = "true" ]; then
+            swift run fairtool app configure --bump patch 
+          fi
+          if [ "${{ inputs.version }}" != "" ]; then
+            swift run fairtool app configure --version "${{ inputs.version }}" 
+          fi
+
+          swift run fairtool app configure -J > /tmp/fairv.json
 
           # show configuration
           cat /tmp/fairv.json | jq .

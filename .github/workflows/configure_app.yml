@@ -97,8 +97,8 @@ jobs:
 
       - name: Setup git
         run: |
-          git config --global user.name 'fair-ground action'
-          git config --global user.email 'fair-ground@users.noreply.github.com'
+          git config --global user.name '${{ github.actor }}'
+          git config --global user.email '${{ github.actor }}@users.noreply.github.com'
 
       - name: "Update App Configuration"
         run: |
@@ -110,10 +110,10 @@ jobs:
           echo "Creating release ${{env.BUNDLE_ID}} ${{ inputs.version }}"
 
           SUPPORTED_PLATFORMS=""
-          if [ "${{ inputs.build_macos }}" == "true" ]; then
+          if [ "${{ inputs.build_macos }}" = "true" ]; then
             SUPPORTED_PLATFORMS="${SUPPORTED_PLATFORMS} macosx"
           fi
-          if [ "${{ inputs.build_ios }}" == "true" ]; then
+          if [ "${{ inputs.build_ios }}" = "true" ]; then
             SUPPORTED_PLATFORMS="${SUPPORTED_PLATFORMS} iphoneos iphonesimulator"
           fi
 
