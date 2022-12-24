@@ -17,33 +17,10 @@
 
 # This workflow is run in a fork of https://www.github.com/FAIR-GROUND/App.git
 # It will create a release PR for the given app.
-name: "Release App Fair App"
+name: "Release App"
 
 on:
   workflow_call:
-    inputs:
-      # the name of the fairground organization (e.g., "appfair")
-      fairground:
-        type: string
-        default: appfair
-        required: false
-      # the semver tag to use to create the release
-      version:
-        type: string
-        required: true
-      build_ios:
-        type: boolean
-        required: true
-      build_macos:
-        type: boolean
-        required: true
-
-name: "Release App"
-# Release App creates a release of the app and issues a release PR.
-#
-# See: https://www.appfair.net
-on: 
-  workflow_dispatch:
     inputs:
       bump_major:
         type: boolean
