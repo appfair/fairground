@@ -24,22 +24,22 @@ on:
     inputs:
       bump_major:
         type: boolean
-        description: 'Bump Version Major'
+        description: 'Bump major version'
         required: false
         default: false
       bump_minor:
         type: boolean
-        description: 'Bump Version Minor'
+        description: 'Bump minor version'
         required: false
         default: false
       bump_patch:
         type: boolean
-        description: 'Bump Version Patch'
+        description: 'Bump patch version'
         required: false
         default: false
       version:
         type: string
-        description: 'Set Specific App Version'
+        description: 'Set specific version'
         required: false
     secrets:
       token:
@@ -47,6 +47,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
   pull-requests: write
 
 jobs:
