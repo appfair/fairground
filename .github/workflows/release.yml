@@ -36,7 +36,7 @@ on:
         type: boolean
         description: 'Bump patch version'
         required: false
-        default: false
+        default: true
       version:
         type: string
         description: 'Set specific version'
