@@ -104,6 +104,8 @@ jobs:
           # show configuration
           cat /tmp/fairv.json | jq .
 
+      - name: Push Release Tag
+        run: |
           # extract build configuration variables from output
           APPNAME=`cat /tmp/fairv.json | jq -re '.productName'`
           APPID=`cat /tmp/fairv.json | jq -re '.bundleIdentifier'`
@@ -116,6 +118,8 @@ jobs:
           git tag -a "${TAGNAME}" -m "Release ${TAGNAME}"
           git push --follow-tags
 
+      - name: Create Pull Request
+        run: |
           # Create a pull request for https://github.com/appfair/App.git
           # to trigger the integration and distribution
           gh pr create --repo appfair/App --title "${APPNAME} ${TAGNAME}" --body "Auto-release ${TAGNAME}"
