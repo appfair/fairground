@@ -457,7 +457,7 @@ jobs:
         if: always()
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh pr close --comment "Integrating and publishing contribution ${{ github.event.pull_request.patch_url }} with workflow ${{ github.event.pull_request.base.repo.html_url }}/actions/runs/${{ github.run_id }}." ${{ github.event.pull_request.html_url }}
+        run: gh pr close --comment "Integrating contribution with workflow ${{ github.event.pull_request.base.repo.html_url }}/actions/runs/${{ github.run_id }}." ${{ github.event.pull_request.html_url }}
 
       - name: "Checkout Base Fairground"
         uses: actions/checkout@v3
