@@ -348,7 +348,7 @@ jobs:
         id: notarization_setup
         env:
             NOTARY_TEAMID: ${{ secrets.NOTARY_TEAMID }}
-        if: env.NOTARY_TEAMID != '' && startsWith(github.ref, 'refs/tags/')
+        if: env.NOTARY_TEAMID != '' && startsWith(github.ref, 'refs/tags/') && steps.platforms.outputs.macos == 'enabled'
         # set the defined variable so it can be checked with `if`
         run: echo "defined=true" >> $GITHUB_OUTPUT
 
