@@ -42,6 +42,10 @@ on:
         description: 'Set Specific App Version'
         required: false
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   create-release:
     runs-on: ubuntu-latest
@@ -112,5 +116,4 @@ jobs:
           # Create a pull request for https://github.com/appfair/App.git
           # to trigger the integration and distribution
           gh pr create --repo appfair/App --title "${APPNAME} ${TAGNAME}" --body "Auto-release ${TAGNAME}"
-
 
