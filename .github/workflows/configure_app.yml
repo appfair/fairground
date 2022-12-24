@@ -95,6 +95,11 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.ref }}
 
+      - name: Setup git
+        run: |
+          git config --global user.name 'fair-ground action'
+          git config --global user.email 'fair-ground@users.noreply.github.com'
+
       - name: "Update App Configuration"
         run: |
           brew install fair-ground/tool/fairtool
@@ -119,9 +124,6 @@ jobs:
 
           # Update the app name in the README.md
           sed -I "" 's;App-Name;${{ env.ORGNAME }};g' README.md
-
-          git config --global user.name 'fair-ground action'
-          git config --global user.email 'fair-ground@users.noreply.github.com'
 
           git add appfair.xcconfig
           git add README.md
