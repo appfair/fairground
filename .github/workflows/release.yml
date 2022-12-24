@@ -44,7 +44,6 @@ on:
     secrets:
       token:
         # Must send a token with contents: write and pull-requests: write
-        type: string
         required: true
 
 jobs:
