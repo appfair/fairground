@@ -41,6 +41,10 @@ on:
         type: string
         description: 'Set Specific App Version'
         required: false
+      token:
+        type: string
+        description: 'The GITHUB_TOKEN for the action'
+        required: true
 
 permissions:
   contents: write
@@ -62,7 +66,8 @@ jobs:
           echo "FAIR_APP_ARTIFACT=${{ github.repository_owner }}" >> $GITHUB_ENV
           echo "PRODUCT_NAME=$(echo ${{ github.repository_owner }} | tr '-' ' ')" >> $GITHUB_ENV
           echo "BUNDLE_ID=app.$(echo ${{ github.repository_owner }})" >> $GITHUB_ENV
-          echo "GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
+          #echo "GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}" >> $GITHUB_ENV
+          echo "GITHUB_TOKEN=${{ inputs.token }}" >> $GITHUB_ENV
 
       - name: Get swift version
         run: swift --version 
