@@ -102,23 +102,23 @@ jobs:
           # show configuration
           cat /tmp/fairv.json | jq .
 
+          # extract build configuration variables from output
+          echo "APPNAME=$(cat /tmp/fairv.json | jq -re '.productName')" >> $GITHUB_ENV
+          echo "APPID=$(cat /tmp/fairv.json | jq -re '.bundleIdentifier')" >> $GITHUB_ENV
+          echo "TAGNAME=$(cat /tmp/fairv.json | jq -re '.version')" >> $GITHUB_ENV
+
+      # Push a semver tag to trigger a release of
+      # https://github.com/Silly-Little-App/App.git
       - name: Push Release Tag
         run: |
-          # extract build configuration variables from output
-          APPNAME=`cat /tmp/fairv.json | jq -re '.productName'`
-          APPID=`cat /tmp/fairv.json | jq -re '.bundleIdentifier'`
-          TAGNAME=`cat /tmp/fairv.json | jq -re '.version'`
-
-          # Push a semver tag to trigger a release of
-          # https://github.com/Silly-Little-App/App.git
           git add appfair.xcconfig
-          git commit -m "Auto-release ${TAGNAME}"
-          git tag -a "${TAGNAME}" -m "Release ${TAGNAME}"
+          git commit -m "Auto-release ${{ env.TAGNAME }}"
+          git tag -a "${{ env.TAGNAME }}" -m "Release ${{ env.TAGNAME }}"
           git push --follow-tags
 
+      # Create a pull request for https://github.com/appfair/App.git
+      # to trigger the integration and distribution
       - name: Create Pull Request
         run: |
-          # Create a pull request for https://github.com/appfair/App.git
-          # to trigger the integration and distribution
-          gh pr create --repo appfair/App --title "${APPNAME} ${TAGNAME}" --body "Auto-release ${TAGNAME}"
+          gh pr create --repo appfair/App --title "${{ env.APPNAME }} ${{ env.TAGNAME }}" --body "Auto-release ${{ env.TAGNAME }}"
 
