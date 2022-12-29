@@ -217,6 +217,8 @@ jobs:
         run: |
           set -o pipefail && env NSUnbufferedIO=YES \
             xcodebuild test -configuration Release -workspace "App.xcworkspace" -scheme "AppFairApp" -sdk "iphonesimulator" -destination "platform=iOS Simulator,name=iPhone 14" \
+            CODE_SIGN_IDENTITY="-" \
+            DEVELOPMENT_TEAM="" \
             | xcpretty
 
           # check to ensure screenshots folders exists
@@ -291,6 +293,8 @@ jobs:
         run: |
           set -o pipefail && env NSUnbufferedIO=YES \
             xcodebuild test -configuration Release -workspace "App.xcworkspace" -scheme "AppFairApp" -sdk "macosx" -destination "platform=macosx" \
+            CODE_SIGN_IDENTITY="-" \
+            DEVELOPMENT_TEAM="" \
             | xcpretty
 
       - name: "Archive macOS App"
@@ -313,7 +317,6 @@ jobs:
             AD_HOC_CODE_SIGNING_ALLOWED=YES \
             CODE_SIGN_IDENTITY="-" \
             DEVELOPMENT_TEAM="" \
-            CODE_SIGN_IDENTITY="-" \
             OTHER_CODE_SIGN_FLAGS="--deep --timestamp=none" \
             OTHER_LIBTOOLFLAGS="-D" \
             FAIRAPP_PRODUCT_NAME="${PRODUCT_NAME}" \
@@ -878,7 +881,6 @@ jobs:
             AD_HOC_CODE_SIGNING_ALLOWED=YES \
             CODE_SIGN_IDENTITY="-" \
             DEVELOPMENT_TEAM="" \
-            CODE_SIGN_IDENTITY="-" \
             OTHER_CODE_SIGN_FLAGS="--deep --timestamp=none" \
             OTHER_LIBTOOLFLAGS="-D" \
             FAIRAPP_PRODUCT_NAME="${PRODUCT_NAME}" \
