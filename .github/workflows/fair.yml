@@ -199,11 +199,11 @@ jobs:
         run: |
           # check both the *.github.io and *.appfair.net URLs
           curl --location --fail -s "https://${ORGNAME}.${HUB_PAGE}/App" | grep "$FAIRGROUND_LAUNCHPAD""${ORGNAME}"
-          if [ "${ORGNAME}" != "App-Fair" ]; then
+          #if [ "${ORGNAME}" != "App-Fair" ]; then
             # note that we check http and not https because the site's
             # SSL configuration may not have completed yet
             #curl --location --fail -s "http://${ORGNAME}.appfair.net" | grep "$FAIRGROUND_LAUNCHPAD""${ORGNAME}"
-          fi
+          #fi
 
       - name: "Resolve Swift Packages"
         run: |
@@ -477,9 +477,9 @@ jobs:
         run: |
           # check both the App.github.io and App.appfair.net URLs
           curl --location --fail -s "https://${ORGNAME}.${HUB_PAGE}/App" | grep "$FAIRGROUND_LAUNCHPAD""${ORGNAME}"
-          if [ "${ORGNAME}" != "App-Fair" ]; then
+          #if [ "${ORGNAME}" != "App-Fair" ]; then
             #curl --location --fail -s "http://${ORGNAME}.appfair.net" | grep "$FAIRGROUND_LAUNCHPAD""${ORGNAME}"
-          fi
+          #fi
 
       - name: "Checkout Integration Pull Request"
         uses: actions/checkout@v3
